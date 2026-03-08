@@ -1,0 +1,241 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0" version="29.5.2">
+  <diagram id="architecture" name="Application Flow">
+    <mxGraphModel dx="1557" dy="857" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=22;fontStyle=1;align=center;verticalAlign=middle;" value="AI Executive Assistant Network — Architecture" vertex="1">
+          <mxGeometry height="40" width="600" x="400" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=5;" value="Frontend (HTMX + Jinja2)" vertex="1">
+          <mxGeometry height="80" width="840" x="280" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="dash" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Dashboard" vertex="1">
+          <mxGeometry height="35" width="100" x="300" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="profiles_ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Profiles" vertex="1">
+          <mxGeometry height="35" width="100" x="420" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="runs_ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Runs" vertex="1">
+          <mxGeometry height="35" width="100" x="540" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="opps_ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Opportunities" vertex="1">
+          <mxGeometry height="35" width="100" x="660" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Cover Letters" vertex="1">
+          <mxGeometry height="35" width="100" x="780" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="pol_ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=11;" value="Policies" vertex="1">
+          <mxGeometry height="35" width="100" x="900" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="api_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=5;" value="FastAPI — REST API + SSE" vertex="1">
+          <mxGeometry height="80" width="840" x="280" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="api_profiles" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="/api/profiles" vertex="1">
+          <mxGeometry height="35" width="100" x="300" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="api_runs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="/api/.../runs&#xa;+ SSE stream" vertex="1">
+          <mxGeometry height="45" width="110" x="420" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="api_opps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="/api/.../opportunities" vertex="1">
+          <mxGeometry height="35" width="130" x="550" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="api_cl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="/api/.../cover-letters" vertex="1">
+          <mxGeometry height="35" width="130" x="700" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="api_audit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="/api/.../audit&#xa;/api/policies" vertex="1">
+          <mxGeometry height="45" width="110" x="850" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="fe_api" edge="1" parent="1" source="frontend_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#6c8ebf;" target="api_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="selector" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" value="Pipeline Router&#xa;(mode: daily | weekly | cover_letter)" vertex="1">
+          <mxGeometry height="80" width="310" x="545" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="api_sel" edge="1" parent="1" source="api_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#82b366;" target="selector">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="daily_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=5;" value="Daily Pipeline (StateGraph)" vertex="1">
+          <mxGeometry height="280" width="420" x="40" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="d_ret" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Fan-out Retrievers&#xa;(Job + Cert + Trends)" vertex="1">
+          <mxGeometry height="40" width="160" x="60" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="d_ext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Fan-out Extractors&#xa;(Job + Cert + Trends)" vertex="1">
+          <mxGeometry height="40" width="160" x="260" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="d_coord" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Coordinator&#xa;(rank + claims)" vertex="1">
+          <mxGeometry height="40" width="160" x="130" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="d_ver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="Verifier&#xa;(deterministic)" vertex="1">
+          <mxGeometry height="40" width="160" x="130" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="d_aud" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Audit Writer&#xa;(JSONL bundle)" vertex="1">
+          <mxGeometry height="35" width="160" x="130" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="d_safe" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" value="Safe&#xa;Degrade" vertex="1">
+          <mxGeometry height="40" width="55" x="60" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e1" edge="1" parent="1" source="d_ret" style="rounded=1;strokeWidth=1;" target="d_ext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e1b" edge="1" parent="1" source="d_ret" style="rounded=1;strokeWidth=1;dashed=1;strokeColor=#d6b656;" target="d_safe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e2" edge="1" parent="1" source="d_ext" style="rounded=1;strokeWidth=1;" target="d_coord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e2b" edge="1" parent="1" source="d_safe" style="rounded=1;strokeWidth=1;dashed=1;strokeColor=#d6b656;" target="d_coord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e3" edge="1" parent="1" source="d_coord" style="rounded=1;strokeWidth=1;" target="d_ver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e4" edge="1" parent="1" source="d_ver" style="rounded=1;strokeWidth=1;" target="d_aud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="weekly_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=5;" value="Weekly Pipeline (StateGraph)" vertex="1">
+          <mxGeometry height="280" width="420" x="500" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="w_ret" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Fan-out Retrievers" vertex="1">
+          <mxGeometry height="35" width="130" x="520" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="w_ext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Fan-out Extractors" vertex="1">
+          <mxGeometry height="35" width="130" x="670" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="w_coord" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Coordinator" vertex="1">
+          <mxGeometry height="35" width="130" x="520" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="w_ceo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="CEO Agent&#xa;(strategy)" vertex="1">
+          <mxGeometry height="35" width="110" x="670" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="w_cfo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="CFO Agent&#xa;(risk)" vertex="1">
+          <mxGeometry height="35" width="100" x="800" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="w_ver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="Verifier" vertex="1">
+          <mxGeometry height="35" width="120" x="600" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="w_aud" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Audit Writer" vertex="1">
+          <mxGeometry height="35" width="120" x="600" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e1" edge="1" parent="1" source="w_ret" style="rounded=1;strokeWidth=1;" target="w_ext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e2" edge="1" parent="1" source="w_ext" style="rounded=1;strokeWidth=1;" target="w_coord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e3" edge="1" parent="1" source="w_coord" style="rounded=1;strokeWidth=1;" target="w_ceo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e4" edge="1" parent="1" source="w_ceo" style="rounded=1;strokeWidth=1;" target="w_cfo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e5" edge="1" parent="1" source="w_cfo" style="rounded=1;strokeWidth=1;" target="w_ver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_e6" edge="1" parent="1" source="w_ver" style="rounded=1;strokeWidth=1;" target="w_aud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=5;" value="Cover Letter Pipeline (StateGraph)" vertex="1">
+          <mxGeometry height="280" width="220" x="960" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_input" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="CV + JD +&#xa;Opportunity" vertex="1">
+          <mxGeometry height="40" width="130" x="1005" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_agent" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Cover Letter Agent&#xa;(generate letter)" vertex="1">
+          <mxGeometry height="40" width="130" x="1005" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_ver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="Verifier" vertex="1">
+          <mxGeometry height="35" width="130" x="1005" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_aud" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;fontSize=10;" value="Audit Writer" vertex="1">
+          <mxGeometry height="35" width="130" x="1005" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_e1" edge="1" parent="1" source="cl_input" style="rounded=1;strokeWidth=1;" target="cl_agent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_e2" edge="1" parent="1" source="cl_agent" style="rounded=1;strokeWidth=1;" target="cl_ver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_e3" edge="1" parent="1" source="cl_ver" style="rounded=1;strokeWidth=1;" target="cl_aud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sel_d" edge="1" parent="1" source="selector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;fontStyle=1;fontSize=10;" target="daily_group" value="daily">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sel_w" edge="1" parent="1" source="selector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;fontStyle=1;fontSize=10;" target="weekly_group" value="weekly">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sel_cl" edge="1" parent="1" source="selector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;fontStyle=1;fontSize=10;" target="cl_group" value="cover_letter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="policy_engine" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=0;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" value="Policy Engine&#xa;(YAML-driven rules)&#xa;&#xa;- Tool allowlists/denylists&#xa;- Step &amp; token budgets&#xa;- Data boundaries&#xa;- PII redaction" vertex="1">
+          <mxGeometry height="130" width="180" x="1230" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="policy_files" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;size=14;" value="/policy/*.yaml" vertex="1">
+          <mxGeometry height="50" width="100" x="1270" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="pf_pe" edge="1" parent="1" source="policy_files" style="rounded=1;strokeWidth=1;strokeColor=#d6b656;" target="policy_engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe_pipes" edge="1" parent="1" source="policy_engine" style="rounded=1;strokeWidth=1;dashed=1;strokeColor=#d6b656;fontSize=9;fontStyle=2;" target="selector" value="governs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="storage_group" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=5;" value="" vertex="1">
+          <mxGeometry height="114" width="854" x="283" y="789" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;size=12;" value="PostgreSQL" vertex="1">
+          <mxGeometry height="80" width="74" x="386" y="801" as="geometry" />
+        </mxCell>
+        <mxCell id="jsonl" parent="1" style="shape=document;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;size=14;" value="JSONL Audit Logs&#xa;&#xa;artifacts/runs/{run_id}/&#xa;audit.jsonl + bundle.json" vertex="1">
+          <mxGeometry height="80" width="180" x="573" y="809" as="geometry" />
+        </mxCell>
+        <mxCell id="replay_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="Replay Engine&#xa;(strict | refresh)&#xa;+ Diff Engine" vertex="1">
+          <mxGeometry height="55" width="120" x="896" y="821.5" as="geometry" />
+        </mxCell>
+        <mxCell id="rep_jsonl" edge="1" parent="1" source="replay_box" style="rounded=1;strokeWidth=1;dashed=1;strokeColor=#9673a6;" target="jsonl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d_store" edge="1" parent="1" source="daily_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#666666;" target="storage_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w_store" edge="1" parent="1" source="weekly_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#666666;" target="storage_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_store" edge="1" parent="1" source="cl_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#666666;" target="storage_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;" value="Legend" vertex="1">
+          <mxGeometry height="170" width="190" x="1220" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" value="Frontend" vertex="1">
+          <mxGeometry height="22" width="75" x="1230" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="API" vertex="1">
+          <mxGeometry height="22" width="75" x="1320" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" value="Pipeline" vertex="1">
+          <mxGeometry height="22" width="75" x="1230" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" value="Policy" vertex="1">
+          <mxGeometry height="22" width="75" x="1320" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" value="Verifier" vertex="1">
+          <mxGeometry height="22" width="75" x="1230" y="465" as="geometry" />
+        </mxCell>
+        <mxCell id="leg6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" value="Storage" vertex="1">
+          <mxGeometry height="22" width="75" x="1320" y="465" as="geometry" />
+        </mxCell>
+        <mxCell id="leg7" parent="1" style="text;html=1;fontSize=9;align=left;" value="── data flow&#xa;- - governed by policy" vertex="1">
+          <mxGeometry height="35" width="160" x="1235" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="evidence_note" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;spacingTop=8;size=14;" value="Evidence-First Contract&#xa;Every claim must have:&#xa;• EvidenceItem (URL + SHA-256 + snippet)&#xa;• Missing evidence → verifier fails or partial" vertex="1">
+          <mxGeometry height="90" width="220" x="1220" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="L34klLYddjblLEF4LKEu-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;b&gt;&lt;font style=&quot;font-size: 17px;&quot;&gt;Storage&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="60" x="1058" y="803" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

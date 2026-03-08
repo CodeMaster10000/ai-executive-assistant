@@ -14,3 +14,5 @@ artifacts/runs/*/
 .pytest_cache/
 .mypy_cache/
 .claude/
+CLAUDE.md
+README-setup.md
