@@ -2,15 +2,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.api import profiles, runs, audit, opportunities, cover_letters, policies
 from app.db import engine, Base
-from app.pages import dashboard, profile_pages, run_pages, opportunity_pages, cover_letter_pages, policy_pages
 
 # Import all models so Base.metadata knows about them
-import app.models
+from app import models  # noqa: F401
 
 
 @asynccontextmanager
@@ -23,15 +22,15 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="AI Executive Assistant Network", lifespan=lifespan)
 
-# Static files and templates
-static_dir = Path(__file__).parent.parent / "static"
-templates_dir = Path(__file__).parent.parent / "templates"
-static_dir.mkdir(parents=True, exist_ok=True)
-templates_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-templates = Jinja2Templates(directory=str(templates_dir))
+# Paths
+spa_dir = Path(__file__).parent.parent / "static" / "spa"
+spa_assets = spa_dir / "assets"
 
-# JSON API routers
+# Mount SPA assets (JS/CSS bundles)
+if spa_assets.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(spa_assets)), name="spa-assets")
+
+# JSON API routers (registered BEFORE the SPA catch-all)
 app.include_router(profiles.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
@@ -39,13 +38,17 @@ app.include_router(opportunities.router, prefix="/api")
 app.include_router(cover_letters.router, prefix="/api")
 app.include_router(policies.router, prefix="/api")
 
-# HTML page routers
-app.include_router(dashboard.router)
-app.include_router(profile_pages.router)
-app.include_router(run_pages.router)
-app.include_router(opportunity_pages.router)
-app.include_router(cover_letter_pages.router)
-app.include_router(policy_pages.router)
+
+# SPA catch-all: any non-API path returns index.html
+@app.get("/{full_path:path}")
+async def spa_catch_all(full_path: str):
+    index = spa_dir / "index.html"
+    if not index.is_file():
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "SPA not built. Run: cd frontend && npm run build"},
+        )
+    return FileResponse(str(index))
 
 
 if __name__ == "__main__":

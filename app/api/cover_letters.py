@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -19,6 +21,9 @@ from app.models.run import Run
 from app.schemas.cover_letter import CoverLetterCreate, CoverLetterRead
 
 router = APIRouter(tags=["cover-letters"])
+
+# Prevent background tasks from being garbage-collected
+_background_tasks: set[asyncio.Task] = set()
 
 
 def _cl_to_read(cl: CoverLetter) -> CoverLetterRead:
@@ -37,6 +42,43 @@ def _cl_to_read(cl: CoverLetter) -> CoverLetterRead:
         evidence_ids=evidence_ids,
         created_at=cl.created_at,
     )
+
+
+async def _resolve_opportunity(
+    db: AsyncSession,
+    opportunity_id: str | None,
+    profile_id: str,
+    jd_text: str,
+) -> tuple[dict, str]:
+    """Resolve opportunity details and JD text from an opportunity ID."""
+    opportunity: dict = {}
+    if not opportunity_id:
+        return opportunity, jd_text
+    opp = await db.get(Opportunity, opportunity_id)
+    if opp is None or opp.profile_id != profile_id:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    opportunity = {
+        "title": opp.title,
+        "source": opp.source,
+        "url": opp.url,
+        "description": opp.description,
+        "opportunity_type": opp.opportunity_type,
+    }
+    if not jd_text:
+        jd_text = opp.description or opp.title
+    return opportunity, jd_text
+
+
+async def _read_cv_content(profile: UserProfile) -> str:
+    """Read CV content from file path or fall back to skills."""
+    if profile.cv_path:
+        try:
+            return await asyncio.to_thread(
+                Path(profile.cv_path).read_text, "utf-8"
+            )
+        except (OSError, UnicodeDecodeError):
+            pass
+    return profile.skills or ""
 
 
 async def _generate_cover_letter(
@@ -133,13 +175,16 @@ async def _generate_cover_letter(
 
 @router.post(
     "/profiles/{profile_id}/cover-letters",
-    response_model=CoverLetterRead,
     status_code=201,
+    responses={
+        404: {"description": "Profile or opportunity not found"},
+        422: {"description": "Either opportunity_id or jd_text must be provided"},
+    },
 )
 async def create_cover_letter(
     profile_id: str,
     body: CoverLetterCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CoverLetterRead:
     """Generate a cover letter from an opportunity or raw JD text."""
     profile = await db.get(UserProfile, profile_id)
@@ -152,34 +197,11 @@ async def create_cover_letter(
             detail="Either opportunity_id or jd_text must be provided",
         )
 
-    # Resolve opportunity details
-    opportunity: dict = {}
     jd_text = body.jd_text or ""
-    opportunity_id = body.opportunity_id
-
-    if opportunity_id:
-        opp = await db.get(Opportunity, opportunity_id)
-        if opp is None or opp.profile_id != profile_id:
-            raise HTTPException(status_code=404, detail="Opportunity not found")
-        opportunity = {
-            "title": opp.title,
-            "source": opp.source,
-            "url": opp.url,
-            "description": opp.description,
-            "opportunity_type": opp.opportunity_type,
-        }
-        if not jd_text:
-            jd_text = opp.description or opp.title
-
-    cv_content = ""
-    if profile.cv_path:
-        try:
-            with open(profile.cv_path, encoding="utf-8") as f:
-                cv_content = f.read()
-        except (OSError, UnicodeDecodeError):
-            cv_content = ""
-    if not cv_content and profile.skills:
-        cv_content = profile.skills
+    opportunity, jd_text = await _resolve_opportunity(
+        db, body.opportunity_id, profile_id, jd_text
+    )
+    cv_content = await _read_cv_content(profile)
 
     # Create run record
     run = Run(profile_id=profile_id, mode="cover_letter", status="pending")
@@ -189,7 +211,7 @@ async def create_cover_letter(
     # Create cover letter record (content filled after pipeline runs)
     cl = CoverLetter(
         profile_id=profile_id,
-        opportunity_id=opportunity_id,
+        opportunity_id=body.opportunity_id,
         run_id=run.id,
         content="",
     )
@@ -199,7 +221,7 @@ async def create_cover_letter(
     await db.refresh(run)
 
     # Launch pipeline in background
-    asyncio.create_task(
+    task = asyncio.create_task(
         _generate_cover_letter(
             run_id=run.id,
             profile_id=profile_id,
@@ -207,20 +229,19 @@ async def create_cover_letter(
             cv_content=cv_content,
             jd_text=jd_text,
             opportunity=opportunity,
-            opportunity_id=opportunity_id,
+            opportunity_id=body.opportunity_id,
         )
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     return _cl_to_read(cl)
 
 
-@router.get(
-    "/profiles/{profile_id}/cover-letters",
-    response_model=list[CoverLetterRead],
-)
+@router.get("/profiles/{profile_id}/cover-letters")
 async def list_cover_letters(
     profile_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[CoverLetterRead]:
     """List all cover letters for a profile."""
     result = await db.execute(
@@ -233,12 +254,12 @@ async def list_cover_letters(
 
 @router.get(
     "/profiles/{profile_id}/cover-letters/{letter_id}",
-    response_model=CoverLetterRead,
+    responses={404: {"description": "Cover letter not found"}},
 )
 async def get_cover_letter(
     profile_id: str,
     letter_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CoverLetterRead:
     """Get a single cover letter with evidence refs."""
     cl = await db.get(CoverLetter, letter_id)

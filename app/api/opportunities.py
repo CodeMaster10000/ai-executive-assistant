@@ -1,6 +1,7 @@
 """Opportunities API: list and retrieve opportunities scoped to a profile."""
 
 import json
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -30,13 +31,10 @@ def _opp_to_read(opp: Opportunity) -> OpportunityRead:
     )
 
 
-@router.get(
-    "/profiles/{profile_id}/opportunities",
-    response_model=list[OpportunityRead],
-)
+@router.get("/profiles/{profile_id}/opportunities")
 async def list_opportunities(
     profile_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[OpportunityRead]:
     result = await db.execute(
         select(Opportunity)
@@ -49,12 +47,12 @@ async def list_opportunities(
 
 @router.get(
     "/profiles/{profile_id}/opportunities/{opportunity_id}",
-    response_model=OpportunityRead,
+    responses={404: {"description": "Opportunity not found"}},
 )
 async def get_opportunity(
     profile_id: str,
     opportunity_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OpportunityRead:
     opp = await db.get(Opportunity, opportunity_id)
     if opp is None or opp.profile_id != profile_id:

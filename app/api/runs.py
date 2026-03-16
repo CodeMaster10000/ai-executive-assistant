@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -12,8 +13,8 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.config import settings
 from app.db import get_db, async_session_factory
-from app.models.run import Run
 from app.models.profile import UserProfile
+from app.models.run import Run
 from app.schemas.run import RunCreate, RunRead
 from app.sse import event_manager
 
@@ -165,11 +166,27 @@ async def _execute_run(run_id: str, profile_id: str, mode: str) -> None:
 # --------------------------------------------------------------------------
 
 
-@router.post("/profiles/{profile_id}/runs", response_model=RunRead, status_code=201)
+@router.get("/runs")
+async def list_all_runs(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: int = 10,
+) -> list[RunRead]:
+    """List recent runs across all profiles."""
+    result = await db.execute(
+        select(Run).order_by(Run.created_at.desc()).limit(limit)
+    )
+    return [_run_to_read(r) for r in result.scalars().all()]
+
+
+@router.post(
+    "/profiles/{profile_id}/runs",
+    status_code=201,
+    responses={404: {"description": "Profile not found"}},
+)
 async def create_run(
     profile_id: str,
     body: RunCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)]
 ) -> RunRead:
     """Create a new run and launch the pipeline in the background."""
     profile = await db.get(UserProfile, profile_id)
@@ -193,10 +210,10 @@ async def create_run(
     return _run_to_read(run)
 
 
-@router.get("/profiles/{profile_id}/runs", response_model=list[RunRead])
+@router.get("/profiles/{profile_id}/runs")
 async def list_runs(
     profile_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[RunRead]:
     """List all runs for a profile, most recent first."""
     result = await db.execute(
@@ -208,11 +225,14 @@ async def list_runs(
     return [_run_to_read(r) for r in runs]
 
 
-@router.get("/profiles/{profile_id}/runs/{run_id}", response_model=RunRead)
+@router.get(
+    "/profiles/{profile_id}/runs/{run_id}",
+    responses={404: {"description": "Run not found"}},
+)
 async def get_run(
     profile_id: str,
     run_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RunRead:
     """Get details of a single run."""
     run = await db.get(Run, run_id)
@@ -227,11 +247,17 @@ async def stream_run(profile_id: str, run_id: str):
     return EventSourceResponse(event_manager.event_stream(run_id))
 
 
-@router.post("/profiles/{profile_id}/runs/{run_id}/cancel")
+@router.post(
+    "/profiles/{profile_id}/runs/{run_id}/cancel",
+    responses={
+        404: {"description": "Run not found"},
+        409: {"description": "Run is not currently executing"},
+    },
+)
 async def cancel_run(
     profile_id: str,
     run_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Cancel a running task."""
     run = await db.get(Run, run_id)

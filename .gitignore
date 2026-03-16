@@ -13,6 +13,8 @@ artifacts/runs/*/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
+frontend/node_modules/
+static/spa/
 .claude/
 CLAUDE.md
 README-setup.md

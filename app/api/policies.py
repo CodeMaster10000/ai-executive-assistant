@@ -15,7 +15,7 @@ def _load_policy(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
-@router.get("/policies", response_model=list[PolicyRead])
+@router.get("/policies")
 async def list_policies() -> list[PolicyRead]:
     policy_dir = settings.policy_dir
     if not policy_dir.is_dir():
@@ -28,7 +28,10 @@ async def list_policies() -> list[PolicyRead]:
     return policies
 
 
-@router.get("/policies/{policy_name}", response_model=PolicyRead)
+@router.get(
+    "/policies/{policy_name}",
+    responses={404: {"description": "Policy not found"}},
+)
 async def get_policy(policy_name: str) -> PolicyRead:
     path = settings.policy_dir / f"{policy_name}.yaml"
     if not path.is_file():

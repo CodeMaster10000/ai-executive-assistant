@@ -1,6 +1,8 @@
+import asyncio
 import json
 import os
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import select
@@ -42,10 +44,10 @@ def _profile_to_read(profile: UserProfile) -> ProfileRead:
     )
 
 
-@router.post("/profiles", response_model=ProfileRead, status_code=201)
+@router.post("/profiles", status_code=201)
 async def create_profile(
     body: ProfileCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
     profile = UserProfile(
         name=body.name,
@@ -59,19 +61,22 @@ async def create_profile(
     return _profile_to_read(profile)
 
 
-@router.get("/profiles", response_model=list[ProfileRead])
+@router.get("/profiles")
 async def list_profiles(
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[ProfileRead]:
     result = await db.execute(select(UserProfile).order_by(UserProfile.created_at))
     profiles = result.scalars().all()
     return [_profile_to_read(p) for p in profiles]
 
 
-@router.get("/profiles/{profile_id}", response_model=ProfileRead)
+@router.get(
+    "/profiles/{profile_id}",
+    responses={404: {"description": "Profile not found"}},
+)
 async def get_profile(
     profile_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
@@ -79,11 +84,14 @@ async def get_profile(
     return _profile_to_read(profile)
 
 
-@router.put("/profiles/{profile_id}", response_model=ProfileRead)
+@router.put(
+    "/profiles/{profile_id}",
+    responses={404: {"description": "Profile not found"}},
+)
 async def update_profile(
     profile_id: str,
     body: ProfileUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
@@ -102,10 +110,14 @@ async def update_profile(
     return _profile_to_read(profile)
 
 
-@router.delete("/profiles/{profile_id}", status_code=204)
+@router.delete(
+    "/profiles/{profile_id}",
+    status_code=204,
+    responses={404: {"description": "Profile not found"}},
+)
 async def delete_profile(
     profile_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
@@ -114,11 +126,14 @@ async def delete_profile(
     await db.commit()
 
 
-@router.post("/profiles/{profile_id}/cv", response_model=ProfileRead)
+@router.post(
+    "/profiles/{profile_id}/cv",
+    responses={404: {"description": "Profile not found"}},
+)
 async def upload_cv(
     profile_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
 ) -> ProfileRead:
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
@@ -129,8 +144,7 @@ async def upload_cv(
 
     file_path = cv_dir / (file.filename or "cv.pdf")
     content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
+    await asyncio.to_thread(Path(file_path).write_bytes, content)
 
     profile.cv_path = str(file_path)
     await db.commit()

@@ -56,7 +56,10 @@ async def get_audit_trail(profile_id: str, run_id: str):
     return {"run_id": run_id, "events": events}
 
 
-@router.get("/profiles/{profile_id}/runs/{run_id}/verifier-report")
+@router.get(
+    "/profiles/{profile_id}/runs/{run_id}/verifier-report",
+    responses={404: {"description": "No audit bundle found for this run"}},
+)
 async def get_verifier_report(profile_id: str, run_id: str):
     """Return the verifier report from the run bundle."""
     writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
@@ -76,6 +79,7 @@ async def get_verifier_report(profile_id: str, run_id: str):
 @router.post(
     "/profiles/{profile_id}/runs/{run_id}/replay",
     response_model=ReplayResponse,
+    responses={404: {"description": "Run or audit bundle not found"}},
 )
 async def replay_run(profile_id: str, run_id: str, body: ReplayRequest):
     """Replay a previous run in strict or refresh mode.
@@ -137,6 +141,7 @@ async def replay_run(profile_id: str, run_id: str, body: ReplayRequest):
 @router.get(
     "/profiles/{profile_id}/runs/{run_id}/diff/{other_run_id}",
     response_model=DiffResponse,
+    responses={404: {"description": "Run not found"}},
 )
 async def diff_runs(profile_id: str, run_id: str, other_run_id: str):
     """Return a structured diff between two runs."""

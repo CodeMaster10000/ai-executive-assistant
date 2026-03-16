@@ -1,0 +1,227 @@
+import { useEffect, useState, useCallback } from "react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { Save, Trash2, Upload, X, Plus, Play, Briefcase, FileEdit } from "lucide-react"
+import { getProfile, updateProfile, deleteProfile, uploadCv } from "@/api/profiles"
+import type { Profile, ProfileUpdate } from "@/api/types"
+import { PageHeader } from "@/components/shared/PageHeader"
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
+
+export default function ProfilePage() {
+  const { profileId } = useParams()
+  const navigate = useNavigate()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const [name, setName] = useState("")
+  const [targets, setTargets] = useState<string[]>([])
+  const [constraints, setConstraints] = useState<string[]>([])
+  const [skills, setSkills] = useState<string[]>([])
+
+  const load = useCallback(() => {
+    if (!profileId) return
+    getProfile(profileId)
+      .then((p) => {
+        setProfile(p)
+        setName(p.name)
+        setTargets(p.targets ?? [])
+        setConstraints(p.constraints ?? [])
+        setSkills(p.skills ?? [])
+      })
+      .finally(() => setLoading(false))
+  }, [profileId])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleSave() {
+    if (!profileId) return
+    const data: ProfileUpdate = { name, targets, constraints, skills }
+    const updated = await updateProfile(profileId, data)
+    setProfile(updated)
+    toast.success("Profile saved")
+  }
+
+  async function handleDelete() {
+    if (!profileId) return
+    await deleteProfile(profileId)
+    toast.success("Profile deleted")
+    navigate("/")
+  }
+
+  async function handleCvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!profileId || !e.target.files?.[0]) return
+    await uploadCv(profileId, e.target.files[0])
+    toast.success("CV uploaded")
+    load()
+  }
+
+  if (loading) return <LoadingSpinner />
+  if (!profile) return <p className="text-muted-foreground">Profile not found.</p>
+
+  return (
+    <div>
+      <PageHeader
+        title={profile.name}
+        description={`Created ${new Date(profile.created_at).toLocaleDateString()}`}
+        actions={
+          <div className="flex gap-2">
+            <Button onClick={handleSave}>
+              <Save className="h-4 w-4 mr-2" /> Save
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete profile?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete "{profile.name}" and all associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        }
+      />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Name */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Name</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </CardContent>
+        </Card>
+
+        {/* CV Upload */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">CV</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {profile.cv_path ? (
+              <p className="text-sm text-muted-foreground mb-2">
+                Uploaded: {profile.cv_path.split("/").pop()}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-2">No CV uploaded</p>
+            )}
+            <Label
+              htmlFor="cv-upload"
+              className="cursor-pointer inline-flex items-center gap-2 border rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
+              <Upload className="h-4 w-4" /> Upload CV
+            </Label>
+            <input id="cv-upload" type="file" className="hidden" onChange={handleCvUpload} />
+          </CardContent>
+        </Card>
+
+        {/* Tag lists */}
+        <TagCard label="Targets" items={targets} onChange={setTargets} />
+        <TagCard label="Constraints" items={constraints} onChange={setConstraints} />
+        <TagCard label="Skills" items={skills} onChange={setSkills} />
+
+        {/* Quick actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link to={`/profiles/${profileId}/runs`}>
+                <Play className="h-4 w-4 mr-2" /> Runs
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to={`/profiles/${profileId}/opportunities`}>
+                <Briefcase className="h-4 w-4 mr-2" /> Opportunities
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to={`/profiles/${profileId}/cover-letters`}>
+                <FileEdit className="h-4 w-4 mr-2" /> Cover Letters
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function TagCard({
+  label,
+  items,
+  onChange,
+}: {
+  label: string
+  items: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [input, setInput] = useState("")
+
+  function add() {
+    const val = input.trim()
+    if (val && !items.includes(val)) {
+      onChange([...items, val])
+    }
+    setInput("")
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-1 mb-2">
+          {items.map((item) => (
+            <Badge key={item} variant="secondary" className="gap-1">
+              {item}
+              <button onClick={() => onChange(items.filter((i) => i !== item))}>
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Add ${label.toLowerCase()}...`}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            className="flex-1"
+          />
+          <Button variant="outline" size="icon" onClick={add}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
