@@ -45,6 +45,7 @@ _agent_factory: Any = None
 
 
 def run_to_read(run: Run) -> RunRead:
+    """Convert a Run ORM instance to a RunRead schema."""
     return RunRead(
         id=run.id,
         profile_id=run.profile_id,

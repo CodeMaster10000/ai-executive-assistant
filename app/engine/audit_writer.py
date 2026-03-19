@@ -23,6 +23,7 @@ class AuditEvent:
     data: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize to a dict, omitting fields that are None."""
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 

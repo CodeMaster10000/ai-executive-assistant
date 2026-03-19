@@ -12,6 +12,8 @@ from app.engine.diff import DiffEngine
 from app.engine.replay import ReplayEngine
 from app.models.run import Run
 
+_NO_AUDIT_BUNDLE = "No audit bundle found for this run"
+
 
 async def _get_run_or_raise(
     db: AsyncSession, run_id: str, profile_id: str
@@ -47,7 +49,7 @@ async def get_verifier_report(
     writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
     bundle = await writer.read_bundle(run_id)
     if bundle is None:
-        raise LookupError("No audit bundle found for this run")
+        raise LookupError(_NO_AUDIT_BUNDLE)
     return bundle.get("verifier_report", {})
 
 
@@ -72,7 +74,7 @@ async def replay_run(
     else:
         bundle = await writer.read_bundle(run_id)
         if bundle is None:
-            raise LookupError("No audit bundle found for this run")
+            raise LookupError(_NO_AUDIT_BUNDLE)
         new_result = bundle.get("final_artifacts", {})
         result = await replay_engine.replay_refresh(
             original_run_id=run_id,
@@ -103,7 +105,7 @@ async def get_executive_insights(
     writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
     bundle = await writer.read_bundle(run_id)
     if bundle is None:
-        raise LookupError("No audit bundle found for this run")
+        raise LookupError(_NO_AUDIT_BUNDLE)
     artifacts = bundle.get("final_artifacts", {})
     return {
         "strategic_recommendations": artifacts.get("strategic_recommendations", []),

@@ -10,9 +10,12 @@ from app.agents.schemas import CFOOutput
 
 
 class CFOAgent(LLMAgent):
+    """Provides risk assessments and ROI analysis from formatted opportunity data."""
+
     agent_name = "cfo"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Analyze formatted data and return risk assessments with a summary."""
         if self._llm is None:
             return {
                 "risk_assessments": [

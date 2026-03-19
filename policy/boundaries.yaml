@@ -2,7 +2,7 @@ agents:
   goal_extractor:
     inputs: [profile_targets, profile_skills]
     outputs: [search_prompts]
-  web_scraper:
+  web_scrapers:
     inputs: [search_prompt, search_category]
     outputs: [raw_job_results, raw_cert_results, raw_event_results, raw_trend_results]
   data_formatter:

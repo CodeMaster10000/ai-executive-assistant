@@ -59,9 +59,12 @@ def _extract_name_from_cv(cv_text: str) -> str | None:
 
 
 class CoverLetterAgent(LLMAgent):
+    """Generates a tailored cover letter from CV content, job description, and profile data."""
+
     agent_name = "cover_letter"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Generate a cover letter from the CV, JD, and profile information in state."""
         cv_content = state.get("cv_content", "")
         jd_text = state.get("jd_text", "")
         job_opportunity = state.get("job_opportunity", {})
@@ -108,6 +111,142 @@ class CoverLetterAgent(LLMAgent):
         return {"cover_letter_content": content}
 
     @staticmethod
+    def _build_hook_paragraph(
+        name: str,
+        title: str,
+        company: str,
+        cv_content: str,
+    ) -> str:
+        """Build the opening paragraph using CV context if available."""
+        if cv_content and cv_content.strip():
+            cv_clean = _strip_markdown(cv_content)
+            cv_snippet = cv_clean[:200].rsplit(" ", 1)[0]
+            return (
+                f"Dear {company} Hiring Team,\n\n"
+                "Having built my career around delivering production-grade "
+                f"software solutions, I was immediately drawn to the {title} "
+                f"role at {company}. My background, which includes "
+                f"{cv_snippet}, has given me a strong foundation in solving "
+                "the kinds of technical challenges this position demands. "
+                "I am confident that my hands-on experience positions me "
+                "to contribute meaningfully from day one."
+            )
+        return (
+            f"Dear {company} Hiring Team,\n\n"
+            "Having built my career around delivering production-grade "
+            f"software solutions, I was immediately drawn to the {title} "
+            f"role at {company}. My track record of designing, building, "
+            "and shipping scalable systems across multiple domains has "
+            "given me a strong foundation in solving the kinds of "
+            "technical challenges this position demands. I am confident "
+            "that my hands-on experience positions me to contribute "
+            "meaningfully from day one."
+        )
+
+    @staticmethod
+    def _build_skills_paragraph(
+        profile_skills: list[str],
+        jd_text: str,
+    ) -> str:
+        """Build the skills alignment paragraph from skills and JD."""
+        if profile_skills:
+            primary = profile_skills[:3]
+            secondary = profile_skills[3:6]
+            skills_para = (
+                f"My core expertise in {', '.join(primary)} aligns directly "
+                "with the technical requirements of this role. I have "
+                "applied these skills across production systems, "
+                "consistently delivering solutions that meet both "
+                "performance benchmarks and business objectives."
+            )
+            if secondary:
+                skills_para += (
+                    " I also bring hands-on experience with "
+                    f"{', '.join(secondary)}, which I have used across "
+                    "multiple production environments to deliver measurable "
+                    "improvements in system reliability, deployment "
+                    "velocity, and overall engineering quality."
+                )
+            if jd_text:
+                jd_preview = _strip_markdown(jd_text)[:150].rsplit(" ", 1)[0]
+                skills_para += (
+                    " Reviewing the role's requirements around "
+                    f"{jd_preview}, I see a strong match with the projects "
+                    "I have led and the technical problems I have solved "
+                    "throughout my career."
+                )
+            return skills_para
+        if jd_text:
+            jd_preview = _strip_markdown(jd_text)[:200].rsplit(" ", 1)[0]
+            return (
+                f"The role's focus on {jd_preview} resonates strongly with "
+                "my professional experience. I have consistently delivered "
+                "solutions in similar technical domains, building systems "
+                "that balance performance, maintainability, and business "
+                "impact. I take pride in writing clean, well-tested code "
+                "and designing architectures that stand the test of time."
+            )
+        return (
+            "Throughout my career, I have consistently delivered "
+            "solutions that balance technical excellence with business "
+            "impact. I bring a strong foundation in software "
+            "engineering principles, system design, and collaborative "
+            "development practices that enable teams to ship reliable "
+            "software at scale. I take pride in writing clean, "
+            "well-tested code and designing architectures that are "
+            "both maintainable and performant."
+        )
+
+    @staticmethod
+    def _build_culture_paragraph(
+        profile_targets: list[str] | None,
+        profile_constraints: list[str] | None,
+        description: str,
+        company: str,
+        title: str,
+    ) -> str:
+        """Build the culture fit paragraph from targets and constraints."""
+        culture_parts: list[str] = []
+        if profile_targets:
+            culture_parts.append(
+                f"My career trajectory toward {', '.join(profile_targets[:3])} "
+                "aligns well with the direction of this role"
+            )
+        if profile_constraints:
+            culture_parts.append(
+                "I value a work environment that supports "
+                f"{', '.join(profile_constraints[:2])}"
+            )
+        if description:
+            desc_preview = _strip_markdown(description)[:120].rsplit(" ", 1)[0]
+            culture_parts.append(
+                f"the opportunity to work on {desc_preview} is "
+                "particularly compelling"
+            )
+
+        if culture_parts:
+            return (
+                f"{culture_parts[0]}, and "
+                + ". ".join(culture_parts[1:])
+                + ". I thrive in environments where engineering rigor meets "
+                "real-world problem solving, and I am eager to bring that "
+                f"mindset to the {company} team. I believe that the best "
+                "software is built by teams that combine deep technical "
+                "skill with strong communication and a shared commitment "
+                "to quality."
+            )
+        return (
+            "I am drawn to teams that value engineering rigor, "
+            "continuous improvement, and collaborative problem solving. "
+            f"The opportunity to contribute to {company}'s technical "
+            "challenges while growing alongside a talented team is "
+            "what makes this role stand out to me. I believe that the "
+            "best software is built by teams that combine deep "
+            "technical skill with strong communication and a shared "
+            "commitment to delivering real value to users."
+        )
+
+    @staticmethod
     def _mock_cover_letter(
         profile_name: str,
         profile_skills: list[str],
@@ -122,133 +261,25 @@ class CoverLetterAgent(LLMAgent):
         company = job_opportunity.get("company", "your organization")
         description = job_opportunity.get("description", "")
 
-        # Paragraph 1: Technical hook using CV context
-        if cv_content and cv_content.strip():
-            cv_clean = _strip_markdown(cv_content)
-            cv_snippet = cv_clean[:200].rsplit(" ", 1)[0]
-            hook = (
-                f"Dear {company} Hiring Team,\n\n"
-                f"Having built my career around delivering production-grade "
-                f"software solutions, I was immediately drawn to the {title} "
-                f"role at {company}. My background, which includes "
-                f"{cv_snippet}, has given me a strong foundation in solving "
-                f"the kinds of technical challenges this position demands. "
-                f"I am confident that my hands-on experience positions me "
-                f"to contribute meaningfully from day one."
-            )
-        else:
-            hook = (
-                f"Dear {company} Hiring Team,\n\n"
-                f"Having built my career around delivering production-grade "
-                f"software solutions, I was immediately drawn to the {title} "
-                f"role at {company}. My track record of designing, building, "
-                f"and shipping scalable systems across multiple domains has "
-                f"given me a strong foundation in solving the kinds of "
-                f"technical challenges this position demands. I am confident "
-                f"that my hands-on experience positions me to contribute "
-                f"meaningfully from day one."
-            )
-
-        # Paragraph 2: Stack alignment from skills + JD
-        if profile_skills:
-            primary = profile_skills[:3]
-            secondary = profile_skills[3:6]
-            skills_para = (
-                f"My core expertise in {', '.join(primary)} aligns directly "
-                f"with the technical requirements of this role. I have "
-                f"applied these skills across production systems, "
-                f"consistently delivering solutions that meet both "
-                f"performance benchmarks and business objectives."
-            )
-            if secondary:
-                skills_para += (
-                    f" I also bring hands-on experience with "
-                    f"{', '.join(secondary)}, which I have used across "
-                    f"multiple production environments to deliver measurable "
-                    f"improvements in system reliability, deployment "
-                    f"velocity, and overall engineering quality."
-                )
-            if jd_text:
-                jd_preview = _strip_markdown(jd_text)[:150].rsplit(" ", 1)[0]
-                skills_para += (
-                    f" Reviewing the role's requirements around "
-                    f"{jd_preview}, I see a strong match with the projects "
-                    f"I have led and the technical problems I have solved "
-                    f"throughout my career."
-                )
-        elif jd_text:
-            jd_preview = _strip_markdown(jd_text)[:200].rsplit(" ", 1)[0]
-            skills_para = (
-                f"The role's focus on {jd_preview} resonates strongly with "
-                f"my professional experience. I have consistently delivered "
-                f"solutions in similar technical domains, building systems "
-                f"that balance performance, maintainability, and business "
-                f"impact. I take pride in writing clean, well-tested code "
-                f"and designing architectures that stand the test of time."
-            )
-        else:
-            skills_para = (
-                f"Throughout my career, I have consistently delivered "
-                f"solutions that balance technical excellence with business "
-                f"impact. I bring a strong foundation in software "
-                f"engineering principles, system design, and collaborative "
-                f"development practices that enable teams to ship reliable "
-                f"software at scale. I take pride in writing clean, "
-                f"well-tested code and designing architectures that are "
-                f"both maintainable and performant."
-            )
-
-        # Paragraph 3: Culture fit, targets, and constraints
-        culture_parts = []
-        if profile_targets:
-            culture_parts.append(
-                f"My career trajectory toward {', '.join(profile_targets[:3])} "
-                f"aligns well with the direction of this role"
-            )
-        if profile_constraints:
-            culture_parts.append(
-                f"I value a work environment that supports "
-                f"{', '.join(profile_constraints[:2])}"
-            )
-        if description:
-            desc_preview = _strip_markdown(description)[:120].rsplit(" ", 1)[0]
-            culture_parts.append(
-                f"the opportunity to work on {desc_preview} is "
-                f"particularly compelling"
-            )
-
-        if culture_parts:
-            culture_para = (
-                f"{culture_parts[0]}, and "
-                + ". ".join(culture_parts[1:])
-                + ". I thrive in environments where engineering rigor meets "
-                f"real-world problem solving, and I am eager to bring that "
-                f"mindset to the {company} team. I believe that the best "
-                f"software is built by teams that combine deep technical "
-                f"skill with strong communication and a shared commitment "
-                f"to quality."
-            )
-        else:
-            culture_para = (
-                f"I am drawn to teams that value engineering rigor, "
-                f"continuous improvement, and collaborative problem solving. "
-                f"The opportunity to contribute to {company}'s technical "
-                f"challenges while growing alongside a talented team is "
-                f"what makes this role stand out to me. I believe that the "
-                f"best software is built by teams that combine deep "
-                f"technical skill with strong communication and a shared "
-                f"commitment to delivering real value to users."
-            )
+        hook = CoverLetterAgent._build_hook_paragraph(
+            name, title, company, cv_content,
+        )
+        skills_para = CoverLetterAgent._build_skills_paragraph(
+            profile_skills, jd_text,
+        )
+        culture_para = CoverLetterAgent._build_culture_paragraph(
+            profile_targets, profile_constraints, description, company, title,
+        )
 
         # Paragraph 4: Call to action
         closing = (
-            f"I would welcome the chance to discuss how my experience and "
+            "I would welcome the chance to discuss how my experience and "
             f"skills can contribute to {company}'s goals. I am genuinely "
             f"excited about the technical challenges this {title} role "
-            f"presents and would appreciate the opportunity to speak with "
-            f"you about how I can add value to your team. Please do not "
-            f"hesitate to reach out at your convenience to arrange a "
-            f"conversation.\n\n"
+            "presents and would appreciate the opportunity to speak with "
+            "you about how I can add value to your team. Please do not "
+            "hesitate to reach out at your convenience to arrange a "
+            "conversation.\n\n"
             f"Best regards,\n{name}"
         )
 

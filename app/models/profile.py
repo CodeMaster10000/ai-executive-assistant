@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class UserProfile(Base):
+    """Persistent user profile representing an independent workspace."""
+
     __tablename__ = "user_profiles"
 
     id: Mapped[str] = mapped_column(

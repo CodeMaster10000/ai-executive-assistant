@@ -68,6 +68,7 @@ export default function ProfilePage() {
     const data: ProfileUpdate = { name, targets, constraints, skills }
     const updated = await updateProfile(profileId, data)
     setProfile(updated)
+    await refreshProfiles()
     toast.success("Profile saved")
   }
 

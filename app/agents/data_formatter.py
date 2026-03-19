@@ -10,9 +10,12 @@ from app.agents.schemas import DataFormatterOutput
 
 
 class DataFormatterAgent(LLMAgent):
+    """Normalizes raw search results into structured DTOs for each category."""
+
     agent_name = "data_formatter"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Format raw search results from all categories into structured DTOs."""
         raw_jobs = state.get("raw_job_results", [])
         raw_certs = state.get("raw_cert_results", [])
         raw_events = state.get("raw_event_results", [])

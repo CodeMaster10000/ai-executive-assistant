@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Trend(Base):
+    """Industry trend or signal identified during a pipeline run."""
+
     __tablename__ = "trends"
 
     id: Mapped[str] = mapped_column(

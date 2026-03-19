@@ -44,7 +44,7 @@ export function MobileNav() {
           <SidebarContent />
         </SheetContent>
       </Sheet>
-      <h2 className="text-lg font-bold tracking-tight text-primary">AI Assistant</h2>
+      <h2 className="text-lg font-bold tracking-tight text-primary">Stratoseer</h2>
       <div className="ml-auto">
         <MobileThemeToggle />
       </div>

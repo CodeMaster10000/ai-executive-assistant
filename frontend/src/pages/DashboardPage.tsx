@@ -79,7 +79,7 @@ export default function DashboardPage() {
         <PageHeader title="Dashboard" />
         <EmptyState
           icon={<LayoutDashboard className="h-10 w-10" />}
-          title="Welcome to AI Executive Assistant"
+          title="Welcome to Stratoseer"
           description="Create your first profile or import an existing one to get started."
           actionLabel="Create Profile"
           onAction={() => setDialogOpen(true)}

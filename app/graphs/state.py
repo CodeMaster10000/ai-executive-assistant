@@ -6,6 +6,8 @@ from typing import Any, TypedDict
 
 
 class DailyState(TypedDict, total=False):
+    """Shared state for the daily pipeline graph execution."""
+
     # Input
     profile_id: str
     profile_targets: list[str]
@@ -32,6 +34,9 @@ class DailyState(TypedDict, total=False):
     formatted_groups: list[dict[str, Any]]
     formatted_trends: list[dict[str, Any]]
 
+    # Verification
+    verifier_results: list[dict[str, Any]]
+
     # Audit
     audit_events: list[dict[str, Any]]
 
@@ -41,6 +46,8 @@ class DailyState(TypedDict, total=False):
 
 
 class WeeklyState(TypedDict, total=False):
+    """Shared state for the weekly pipeline graph execution."""
+
     # Input
     profile_id: str
     profile_targets: list[str]
@@ -73,6 +80,9 @@ class WeeklyState(TypedDict, total=False):
     risk_assessments: list[dict[str, Any]]
     cfo_summary: str
 
+    # Verification
+    verifier_results: list[dict[str, Any]]
+
     # Audit
     audit_events: list[dict[str, Any]]
 
@@ -82,6 +92,8 @@ class WeeklyState(TypedDict, total=False):
 
 
 class CoverLetterState(TypedDict, total=False):
+    """Shared state for the cover letter pipeline graph execution."""
+
     # Input
     profile_id: str
     profile_name: str
@@ -95,6 +107,9 @@ class CoverLetterState(TypedDict, total=False):
 
     # Cover letter output
     cover_letter_content: str
+
+    # Verification
+    verifier_results: list[dict[str, Any]]
 
     # Audit
     audit_events: list[dict[str, Any]]

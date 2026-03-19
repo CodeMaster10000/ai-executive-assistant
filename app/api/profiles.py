@@ -19,6 +19,7 @@ async def create_profile(
     body: ProfileCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
+    """Create a new profile."""
     return await profile_service.create_profile(db, body)
 
 
@@ -26,6 +27,7 @@ async def create_profile(
 async def list_profiles(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[ProfileRead]:
+    """List all profiles."""
     return await profile_service.list_profiles(db)
 
 
@@ -37,6 +39,7 @@ async def get_profile(
     profile_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
+    """Get a single profile by ID."""
     result = await profile_service.get_profile(db, profile_id)
     if result is None:
         raise HTTPException(status_code=404, detail=profile_not_found)
@@ -52,6 +55,7 @@ async def update_profile(
     body: ProfileUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
+    """Update an existing profile."""
     result = await profile_service.update_profile(db, profile_id, body)
     if result is None:
         raise HTTPException(status_code=404, detail=profile_not_found)
@@ -67,6 +71,7 @@ async def delete_profile(
     profile_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
+    """Delete a profile and all associated data."""
     deleted = await profile_service.delete_profile(db, profile_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=profile_not_found)
@@ -80,6 +85,7 @@ async def export_profile(
     profile_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    """Export a profile as a portable dict."""
     result = await profile_service.export_profile(db, profile_id)
     if result is None:
         raise HTTPException(status_code=404, detail=profile_not_found)
@@ -91,6 +97,7 @@ async def import_profile(
     body: dict,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProfileRead:
+    """Import a profile from previously exported data."""
     return await profile_service.import_profile(db, body)
 
 
@@ -103,6 +110,7 @@ async def upload_cv(
     db: Annotated[AsyncSession, Depends(get_db)],
     file: UploadFile = File(...),
 ) -> ProfileRead:
+    """Upload a CV file for a profile."""
     content = await file.read()
     result = await profile_service.upload_cv(
         db, profile_id, file.filename or "cv.pdf", content
@@ -123,6 +131,7 @@ async def extract_skills_from_cv(
     profile_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ExtractedSkills:
+    """Extract skills from a profile's uploaded CV using AI."""
     try:
         return await profile_service.extract_skills_from_cv(db, profile_id)
     except LookupError:

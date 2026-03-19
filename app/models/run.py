@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Run(Base):
+    """Immutable execution record for a daily, weekly, or cover letter pipeline run."""
+
     __tablename__ = "runs"
 
     id: Mapped[str] = mapped_column(

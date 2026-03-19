@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Course(Base):
+    """Online course or training opportunity found during a pipeline run."""
+
     __tablename__ = "courses"
 
     id: Mapped[str] = mapped_column(

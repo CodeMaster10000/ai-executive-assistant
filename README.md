@@ -1,351 +1,316 @@
-# AI Executive Assistant Network
+<p align="center">
+  <img src="frontend/public/favicon.svg" width="80" alt="Stratoseer logo" />
+</p>
 
-## Introduction
-
-This repository implements a **multi-agent AI system** designed to automate and structure the career intelligence workflow. It addresses a practical problem: professionals spend significant time manually scanning job boards, tracking certification changes, monitoring industry trends, and tailoring application materials - repetitive tasks that benefit from automation but demand accuracy and traceability.
-
-The system deploys a network of specialized agents - retrieval scouts, strategic planners, a deterministic verifier, and an audit writer - coordinated through LangGraph state machines. Each agent has a narrowly scoped role, explicit tool permissions, and produces outputs that are independently verified before reaching the user. The result is a career intelligence pipeline that is auditable end-to-end, reproducible via replay, and extensible by adding new agents or policy rules without modifying the orchestration logic.
-
-The application exposes both a REST API and a lightweight web GUI, supports multiple independent career profiles, and streams pipeline progress in real time. All agent behavior is governed by declarative YAML policies, and every execution produces an immutable audit bundle that enables strict reproducibility and drift detection.
+<h1 align="center">Stratoseer</h1>
+<p align="center"><strong>Your AI board of advisors, scanning ahead.</strong></p>
+<p align="center">
+  A multi-agent career intelligence system that scouts job openings, certifications, courses, events, communities, and industry trends, then synthesizes them into strategic recommendations, risk assessments, and tailored cover letters.
+</p>
 
 ---
 
-A multi-agent career intelligence system that acts as a **digital board of advisors**. It orchestrates specialized AI agents - scouts, planners, a verifier, and an auditor - to continuously surface job opportunities, certification paths, and industry trends, then synthesize them into actionable career briefs and tailored cover letters.
+## What does it do?
 
-Each agent operates under explicit **policy-as-code** constraints: tool allowlists, token budgets, data boundaries, and PII redaction rules - all defined in version-controlled YAML and enforced at runtime.
+You define a career profile (your skills, targets, constraints, and CV). Stratoseer dispatches a network of specialized AI agents that:
 
-## Table of Contents
+1. **Scout** the web for opportunities matching your profile
+2. **Format and rank** everything it finds with evidence-backed claims
+3. **Analyze strategically** via CEO and CFO advisor agents
+4. **Generate cover letters** tailored to specific job postings using your CV
+5. **Audit every step** so you can trace exactly how each result was produced
 
-- [Requirements](#requirements)
-- [Getting Started](#getting-started)
-- [Architecture](#architecture)
-- [How It Works](#how-it-works)
-- [Critical Architectural Decisions](#critical-architectural-decisions)
-- [API Reference](#api-reference)
-- [Testing Strategy](#testing-strategy)
-- [Agent & Model Evaluation](#agent--model-evaluation)
-- [Packaging & CI](#packaging--ci)
+Everything is governed by policy-as-code (YAML files) that control which agents can access what tools, how many tokens they can spend, and what data crosses agent boundaries.
 
-## Requirements
+---
 
-- **Python** 3.13+
-- **PostgreSQL** 16+ (provided via Docker Compose)
-- **Docker** & **Docker Compose** (for the database)
+## See it in action
 
-## Getting Started
+### Dashboard
 
-**1. Clone and set up the virtual environment**
+The dashboard gives you a bird's-eye view: your profiles, recent runs, and quick stats.
+
+<img src="images/landing-page.png" width="850" alt="Dashboard" />
+
+Each profile is an independent workspace. A Developer, a UI/UX Designer, and a Marketing Manager can all coexist, each with their own runs, results, and cover letters.
+
+---
+
+### Profile setup
+
+Create a profile with your name, targets, constraints, skills, and CV. Skills can be imported directly from an uploaded CV.
+
+<img src="images/create-profile-landing.png" width="850" alt="Profile Details" />
+
+The profile feeds every pipeline. Targets like "certify for AI" or "find a senior-backend job" drive what the scouts search for. Constraints like "hybrid working model" filter what comes back.
+
+---
+
+### Running a pipeline
+
+Trigger a daily, weekly, or cover letter run. Each run records a full audit trail showing every agent that fired, what it produced, and when.
+
+<img src="images/runs.png" width="850" alt="Run Audit Trail" />
+
+The audit trail is append-only. You can see the `goal_extractor` parse your profile into search prompts, the `web_scrapers` fan out across sources, and every intermediate result along the way.
+
+---
+
+### Results: Jobs
+
+The scouts find real job postings that match your profile. Each result includes a relevance summary and a link to the original source.
+
+<img src="images/recommended-jobs.png" width="850" alt="Recommended Jobs" />
+
+---
+
+### Results: Courses
+
+The same run also surfaces courses from platforms like Udemy and Coursera, matched to your skill gaps and career targets.
+
+<img src="images/recommended-courses.png" width="850" alt="Recommended Courses" />
+
+Results are organized into tabs: **Jobs**, **Certifications**, **Courses**, **Events**, **Groups**, and **Trends**.
+
+---
+
+### Weekly strategic analysis
+
+A weekly run goes further. After gathering opportunities, the **CEO agent** produces strategic recommendations (prioritized by impact), and the **CFO agent** delivers a risk assessment with time estimates and ROI ratings.
+
+<img src="images/weekly-results.png" width="850" alt="Weekly Results" />
+
+---
+
+### Cover letters
+
+Select a discovered job (or paste a raw job description) and generate a tailored cover letter. The agent reads your CV and the posting, then writes a letter grounded in your actual experience.
+
+<img src="images/cover-letter-landing.png" width="850" alt="Cover Letters" />
+
+<img src="images/generate-cover-letter.png" width="580" alt="Generate Cover Letter" />
+
+---
+
+### Policies
+
+All agent behavior is governed by read-only YAML policy files. Boundaries, budgets, redaction rules, allowed sources, and tool permissions are all inspectable from the GUI.
+
+<img src="images/policies.png" width="580" alt="Policies" />
+
+---
+
+## Agent flow
+
+Three pipelines, each a LangGraph `StateGraph`:
+
+### Daily pipeline
+
+```mermaid
+flowchart TD
+    A([Start]) --> B[Goal Extractor]
+    B --> C[Web Scrapers<br/><i>5 parallel: jobs, certs,<br/>events, groups, trends</i>]
+    C --> D{Results?}
+    D -- has data --> E[Data Formatter]
+    D -- all empty --> F[Safe Degrade]
+    E --> G[Audit Writer]
+    F --> G
+    G --> H([End])
+
+    style A fill:#4f46e5,color:#fff
+    style H fill:#4f46e5,color:#fff
+    style D fill:#0891b2,color:#fff
+    style F fill:#dc2626,color:#fff
+```
+
+### Weekly pipeline
+
+```mermaid
+flowchart TD
+    A([Start]) --> B[Goal Extractor]
+    B --> C[Web Scrapers<br/><i>5 parallel: jobs, certs,<br/>events, groups, trends</i>]
+    C --> D{Results?}
+    D -- has data --> E[Data Formatter]
+    D -- all empty --> F[Safe Degrade]
+    E --> G[CEO Agent<br/><i>Strategic recommendations</i>]
+    F --> G
+    G --> I[CFO Agent<br/><i>Risk assessment</i>]
+    I --> J[Audit Writer]
+    J --> K([End])
+
+    style A fill:#4f46e5,color:#fff
+    style K fill:#4f46e5,color:#fff
+    style D fill:#0891b2,color:#fff
+    style F fill:#dc2626,color:#fff
+    style G fill:#059669,color:#fff
+    style I fill:#059669,color:#fff
+```
+
+### Cover letter pipeline
+
+```mermaid
+flowchart TD
+    A([Start]) --> B[Cover Letter Agent<br/><i>CV + JD + opportunity</i>]
+    B --> C[Audit Writer]
+    C --> D([End])
+
+    style A fill:#4f46e5,color:#fff
+    style D fill:#4f46e5,color:#fff
+```
+
+**Key design rules enforced by the policy engine:**
+
+- **Scouts** (web scrapers) can access the network. Planners (CEO/CFO) cannot.
+- **Safe degradation** activates when all scrapers return empty. The pipeline continues with an explicit partial status rather than failing silently.
+- **Audit is terminal.** Every pipeline ends at the audit writer. No conditional exit paths.
+- **CEO/CFO always run** in the weekly pipeline, even on empty data, so strategic analysis is always recorded.
+
+---
+
+## Local setup
+
+### Prerequisites
+
+- **Python** 3.11+
+- **Node.js** 18+ (for the frontend build)
+- **PostgreSQL** 16+ (via Docker or local install)
+- **Docker & Docker Compose** (recommended for the database)
+
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/CodeMaster10000/ai-executive-assistant.git
-cd ai-executive-assistant
+git clone https://github.com/CodeMaster10000/stratoseer.git
+cd stratoseer
+```
 
+### 2. Set up the backend
+
+```bash
 python -m venv .venv
-source .venv/bin/activate        # Linux/macOS
-# .venv\Scripts\activate          # Windows
+source .venv/bin/activate        # Linux / macOS
+# .venv\Scripts\activate         # Windows
 
 pip install -e ".[dev]"
 ```
 
-**2. Configure environment**
+### 3. Configure environment
 
-```bash
-cp .env.example .env
-# Edit .env if you need to change database credentials, ports, etc.
+Create a `.env` file in the project root:
+
+```env
+POSTGRES_USER=assistant
+POSTGRES_PASSWORD=assistant
+POSTGRES_DB=assistant
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+APP_HOST=0.0.0.0
+APP_PORT=8000
+APP_RELOAD=true
+POLICY_DIR=policy
+ARTIFACTS_DIR=artifacts
+LOG_LEVEL=INFO
+
+# Optional: enable real LLM calls (off by default, mock agents used)
+# OPENAI_API_KEY=sk-...
+# LLM_ENABLED=true
 ```
 
-**3. Start the database**
+### 4. Start the database
 
 ```bash
 docker compose up -d
 ```
 
-**4. Run the application**
+### 5. Build the frontend
 
 ```bash
-python app/main.py
-# Server starts at http://localhost:8000
+cd frontend
+npm install
+npm run build
+cd ..
 ```
 
-**5. Run the tests**
+### 6. Run the server
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+### 7. Run tests
 
 ```bash
 pytest
 ```
 
-## Architecture
+Tests run against an in-memory SQLite database. No external services needed.
 
-The system is structured in four layers: a lightweight HTMX frontend, a FastAPI REST/SSE API, a LangGraph agent orchestration layer, and a dual-storage backend (PostgreSQL for entities, append-only JSONL for audit trails).
+---
 
-![Architecture Diagram](docs/architecture-diagram-view.png)
+### Frontend development
 
-> Editable source: [`docs/architecture.drawio`](docs/architecture.drawio)
-
-### Layer Breakdown
-
-| Layer | Technology | Responsibility |
-|-------|-----------|----------------|
-| **Frontend** | HTMX + Jinja2 | Dashboard, profile management, run monitoring, opportunity browsing, cover letter viewer, policy inspector |
-| **API** | FastAPI | REST endpoints, SSE streaming for real-time run progress, profile-scoped resource access |
-| **Orchestration** | LangGraph StateGraph | Three pipeline definitions (daily, weekly, cover_letter), each a directed graph of agent nodes with conditional routing |
-| **Storage** | PostgreSQL + JSONL | Relational entities (profiles, runs, opportunities, cover letters) + immutable, append-only audit logs per run |
-| **Policy Engine** | YAML + Python | Enforces tool/source allowlists, step/token budgets, data boundaries, and PII redaction at runtime |
-
-## How It Works
-
-### Multi-Profile Workspaces
-
-Every profile (e.g., "Cloud Architect", "Backend Developer") is an independent workspace. All runs, opportunities, and cover letters are scoped to a profile. The dashboard provides a profile switcher.
-
-### Pipeline Execution
-
-When a user triggers a run, the API creates a `Run` record and launches a LangGraph `StateGraph` in the background. There are three pipeline modes:
-
-**Daily Pipeline** - Broad opportunity scan
-```
-Retrievers (Job + Cert + Trends) → Extractors → Coordinator → Verifier → Audit Writer
-```
-Fan-out retrieval across three scout types, structured extraction, ranking with evidence-backed claims, deterministic verification, and audit trail creation. If all retrievals return empty, the pipeline activates **safe degradation** - it continues with an explicit partial status rather than failing silently.
-
-**Weekly Pipeline** - Strategic analysis
-```
-Retrievers → Extractors → Coordinator → CEO Agent → CFO Agent → Verifier → Audit Writer
-```
-Extends the daily pipeline with a CEO agent (strategic alignment, priority recommendations) and a CFO agent (risk assessment, resource analysis) before verification.
-
-**Cover Letter Pipeline** - Targeted generation
-```
-CV + JD + Opportunity → Cover Letter Agent → Verifier → Audit Writer
-```
-Takes the user's CV content, a job description, and optionally a stored opportunity to produce a tailored cover letter with evidence-backed claims referencing both the CV and JD.
-
-### Evidence-First Contract
-
-Every claim that references external information must carry an `EvidenceItem` - a URL, SHA-256 content hash, and a text snippet. The verifier checks evidence coverage, confidence thresholds, schema compliance, deduplication, and output bounds. Missing evidence causes the verifier to fail the run or mark it as partial. There are no silent failures.
-
-### Real-Time Progress
-
-Each run streams progress events via Server-Sent Events (SSE). The frontend subscribes to `/api/profiles/{id}/runs/{id}/stream` and updates the UI as agents start, produce outputs, and complete.
-
-### Replay & Diff
-
-Completed runs can be replayed in two modes:
-- **Strict** - re-executes using stored tool responses (zero network calls), verifying reproducibility
-- **Refresh** - re-fetches URLs, compares content hashes against stored values, and flags drift
-
-Both modes produce a diff report showing what changed: new/removed opportunities, evidence drift, priority shifts.
-
-## Critical Architectural Decisions
-
-### Policy-as-Code Over Convention
-
-Agent behavior is governed by YAML policy files (`policy/*.yaml`), not by informal coding conventions. The policy engine enforces:
-
-- **Tool allowlists/denylists** - Retriever agents can access the network; planner agents (CEO, CFO, Coordinator) cannot. The cover letter agent reads only CV + JD. These boundaries are checked at runtime, not trusted by convention.
-- **Step and token budgets** - Each agent has a `max_steps` and `max_tokens` cap, preventing runaway execution.
-- **Data boundaries** - Which fields can cross which agent boundaries is declared explicitly.
-- **PII redaction** - Sensitive fields are redacted in audit logs according to configurable patterns.
-
-This means adding a new agent or changing permissions is a YAML edit, not a code change - and policy unit tests verify that forbidden behavior is actually blocked.
-
-### Deterministic Verifier (Not an LLM)
-
-The verifier is pure Python logic - no LLM calls. It validates:
-- JSON schema compliance of all agent outputs
-- Evidence coverage (every claim with `requires_evidence=true` must have evidence IDs that resolve)
-- Confidence thresholds (configurable minimum)
-- Policy compliance (agent stayed within allowed tools/budgets)
-- Deduplication (no duplicate opportunities)
-- Output bounds (configurable max items)
-
-This makes verification fast, reproducible, and auditable. A verifier failure is always explainable by looking at the report.
-
-### Immutable Audit Trail
-
-Every run produces an audit bundle under `artifacts/runs/{run_id}/`:
-- `audit.jsonl` - append-only event log (agent starts, outputs, errors, with timestamps)
-- `bundle.json` - input profile hash, policy version hash, prompt template IDs, tool call hashes, intermediate outputs, verifier report, and final artifacts
-
-This enables strict replay: given the same inputs and stored responses, the system should produce the same outputs. Drift detection catches cases where it doesn't.
-
-### TypedDict for Agents, Pydantic for Boundaries
-
-Inter-agent state within a LangGraph pipeline uses `TypedDict` - idiomatic for LangGraph, lightweight, and avoids serialization overhead between nodes. At API and persistence boundaries, data passes through Pydantic v2 models for validation, serialization, and documentation.
-
-### Safe Degradation Over Silent Failure
-
-When retrieval yields nothing (network issues, empty sources), the pipeline does not silently return an empty result. It explicitly activates safe degradation: marks the run as partial, logs the reason, and continues through verification so the audit trail captures what happened and why.
-
-### Mock-First, Swap Later
-
-All Phase 1 agents return hardcoded fixture data. Each agent is a callable class with a `__call__(self, state) -> dict` interface. Swapping in real LLM calls means replacing the class body - the graph topology, verification, and audit infrastructure remain unchanged.
-
-## API Reference
-
-All endpoints use the `/api` prefix. Profile-scoped resources nest under `/api/profiles/{profile_id}`.
-
-### Profiles
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/profiles` | Create a new career profile (name, targets, skills, CV) |
-| `GET` | `/api/profiles` | List all profiles |
-| `GET` | `/api/profiles/{id}` | Get a single profile |
-| `PUT` | `/api/profiles/{id}` | Update profile details |
-| `DELETE` | `/api/profiles/{id}` | Delete a profile and its associated data |
-| `POST` | `/api/profiles/{id}/cv` | Upload a CV file for the profile |
-
-### Runs
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/profiles/{id}/runs` | Start a new run (mode: `daily`, `weekly`, or `cover_letter`) |
-| `GET` | `/api/profiles/{id}/runs` | List all runs for a profile |
-| `GET` | `/api/profiles/{id}/runs/{run_id}` | Get run status and details |
-| `GET` | `/api/profiles/{id}/runs/{run_id}/stream` | SSE stream of real-time progress events |
-| `POST` | `/api/profiles/{id}/runs/{run_id}/cancel` | Cancel a running pipeline |
-
-### Audit & Replay
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/profiles/{id}/runs/{run_id}/audit` | Retrieve the audit trail for a run |
-| `GET` | `/api/profiles/{id}/runs/{run_id}/verifier-report` | Get the verifier's pass/fail report with per-claim details |
-| `POST` | `/api/profiles/{id}/runs/{run_id}/replay` | Replay a run (mode: `strict` or `refresh`) |
-| `GET` | `/api/profiles/{id}/runs/{run_id}/diff/{other_id}` | Compare two runs - surfaces changes in opportunities, evidence, and priorities |
-
-### Opportunities & Cover Letters
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/profiles/{id}/opportunities` | List discovered opportunities across all runs |
-| `GET` | `/api/profiles/{id}/opportunities/{opp_id}` | Get opportunity details with evidence references |
-| `POST` | `/api/profiles/{id}/cover-letters` | Generate a cover letter (from an opportunity ID or raw JD text) |
-| `GET` | `/api/profiles/{id}/cover-letters` | List all generated cover letters |
-| `GET` | `/api/profiles/{id}/cover-letters/{letter_id}` | Get a cover letter with evidence references |
-
-### Policies
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/policies` | List all active policy files |
-| `GET` | `/api/policies/{name}` | Get the contents of a specific policy file |
-
-## Testing Strategy
-
-The project uses **pytest** with **pytest-asyncio** for async test support. Tests run against an **in-memory SQLite** database (via `aiosqlite`), eliminating external dependencies.
+If you want to work on the frontend with hot reload:
 
 ```bash
-pytest                              # Run all tests
-pytest tests/test_policy_engine.py  # Run a specific file
-pytest -v                           # Verbose output
+cd frontend
+npm run dev
 ```
 
-### Test Organization
+The Vite dev server runs on `http://localhost:5173` and proxies `/api` requests to the FastAPI backend on port 8000.
 
-| Test File | What It Covers |
-|-----------|---------------|
-| `test_policy_engine.py` | Policy loading, tool allowlist/denylist enforcement, budget checks, boundary rules, PII redaction |
-| `test_verifier.py` | Schema validation, evidence coverage, confidence thresholds, dedup, output bounds, safe degradation |
-| `test_audit_writer.py` | JSONL append, bundle creation, log reading, PII redaction in logs |
-| `test_graphs_daily.py` | Full daily pipeline execution, opportunity counts, evidence creation, verifier pass, safe degradation path |
-| `test_graphs_weekly.py` | Weekly pipeline with CEO/CFO agents, strategic recommendations, risk assessments |
-| `test_graphs_cover_letter.py` | Cover letter pipeline, evidence-from-CV/JD, verifier pass, empty-CV edge case |
-| `test_replay_diff.py` | Strict replay, refresh replay, diff report generation |
-| `test_api_profiles.py` | Profile CRUD endpoints |
-| `test_api_runs.py` | Run creation, listing, status transitions, SSE streaming |
-| `test_api_cover_letters.py` | Cover letter creation, validation, listing |
+---
 
-### Testing Principles
+## Architecture decisions
 
-- **Policy tests verify denial** - tests assert that forbidden tool usage is actually blocked, not just that allowed usage works.
-- **Pipeline tests are end-to-end** - they compile and invoke the full `StateGraph`, not individual agents in isolation, catching integration issues in graph wiring.
-- **The verifier is tested independently** - since it's deterministic, it gets thorough unit testing with edge cases (missing evidence, low confidence, duplicate items, empty inputs).
-- **API tests use real FastAPI** - via `httpx.AsyncClient` with `ASGITransport`, testing the full request/response cycle including middleware and dependency injection.
+### Policy-as-code, not convention
 
-## Agent & Model Evaluation
+Agent behavior is governed by YAML policy files under `policy/`, not by informal coding patterns. The policy engine enforces tool allowlists, token budgets, data boundaries, and PII redaction at runtime. Adding a new agent or changing permissions is a YAML edit, not a code change.
 
-### Current State (Phase 1)
+### Deterministic verifier
 
-All agents are **mock implementations** returning hardcoded fixture data. This is intentional - it lets us build and validate the entire infrastructure (graph topology, verification, audit trails, replay, API, and GUI) without LLM cost or latency.
+The verifier is pure Python logic with zero LLM calls. It validates schema compliance, evidence coverage, confidence thresholds, deduplication, and output bounds. A failure is always explainable by reading the verifier report.
 
-### Evaluation Strategy for Real Agents
+### Evidence-first contract
 
-When swapping in real LLM-backed agents, evaluation follows three layers:
+Every claim that references external information carries an `EvidenceItem` with a URL, SHA-256 content hash, and text snippet. Missing evidence causes a hard failure or explicit partial status. There are no silent gaps.
 
-**1. Output Schema Compliance** - The verifier already validates that every agent output matches the expected schema. This catches malformed JSON, missing fields, and type mismatches without any additional tooling.
+### Immutable audit trail
 
-**2. Evidence Fidelity** - For retriever/extractor agents, the verifier checks that every claim has evidence with valid URLs and content hashes. The refresh-mode replay re-fetches URLs and flags content drift, detecting hallucinated or stale references.
+Every run produces an append-only JSONL log and a bundle JSON capturing input hashes, policy versions, prompt template IDs, tool call hashes, and the verifier report. This enables strict replay and drift detection.
 
-**3. Replay Regression** - Strict replay re-runs the pipeline with stored tool responses. If the output changes, the diff report shows exactly what diverged. This catches prompt regressions: a prompt template change that silently degrades output quality will surface as a diff against the previous run.
+### TypedDict for agents, Pydantic at boundaries
 
-### Evaluation Workflow
+Inter-agent state within LangGraph uses `TypedDict` (idiomatic, lightweight). At API and persistence boundaries, data passes through Pydantic v2 models for validation and documentation.
 
-```
-1. Run pipeline with real agents → produces artifacts + audit bundle
-2. Human review of output quality (briefs, cover letters)
-3. Store the run as a "golden" baseline
-4. After any prompt/model change, strict-replay the golden run
-5. Diff report shows regressions → fix or accept
-```
+### Safe degradation over silent failure
 
-The audit bundle captures prompt template IDs and parameter hashes, so you can trace exactly which prompt version produced which output.
+When all scrapers return empty, the pipeline explicitly marks the run as partial, logs the reason, and continues through the remaining agents. The audit trail always captures what happened and why.
 
-## Packaging & CI
+### Async-first
 
-### Current Packaging
+All agents, the audit writer, and the replay/diff engines are async. Mock agents return before any `await`, so tests run fast. Real LLM-backed agents will benefit from non-blocking I/O without any plumbing changes.
 
-The app is packaged as a standard Python project via `pyproject.toml` with `setuptools`. The database runs in Docker Compose.
+### System overview
 
-```bash
-pip install -e ".[dev]"     # Editable install with dev dependencies
-docker compose up -d        # PostgreSQL
-python app/main.py          # Start the server
-```
+<img src="docs/arch-snapshot.png" width="850" alt="Architecture overview" />
 
-### Docker Packaging (Planned)
+---
 
-A production `Dockerfile` will:
-- Use a multi-stage build (builder + slim runtime image)
-- Install only production dependencies (no `[dev]`)
-- Run uvicorn with `--workers` for multi-process serving
-- Set `APP_RELOAD=false` for production
+## Tech stack
 
-### CI Pipeline (Planned)
+| Layer | Technology |
+|---|---|
+| Orchestration | LangGraph (StateGraph) + LangChain |
+| Backend | FastAPI + Pydantic v2 |
+| Frontend | React + Vite + TypeScript + Tailwind CSS v4 + shadcn/ui |
+| Database | PostgreSQL + append-only JSONL |
+| Real-time | Server-Sent Events (SSE) |
+| Policies | YAML under `policy/` |
+| Testing | pytest + pytest-asyncio + in-memory SQLite |
 
-The planned CI workflow (GitHub Actions):
+---
 
-```yaml
-# Triggers: push to main, pull requests
-steps:
-  - Lint:        ruff check .
-  - Type check:  (optional, mypy or pyright)
-  - Test:        pytest --tb=short -q
-  - Build:       docker build .
-  - Push:        push image to registry (on main only)
-```
+## License
 
-**Why this order matters:**
-- Lint catches style issues in seconds (fast feedback)
-- Tests run against in-memory SQLite (no Docker-in-Docker needed for CI)
-- Docker build only runs if tests pass (no wasted build minutes)
-- Image push only happens on main (not on PRs)
-
-### Environment Configuration
-
-All configuration is driven by environment variables via a single `.env` file, shared between Docker Compose (database) and the application (via `pydantic-settings`):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `POSTGRES_USER` | `assistant` | Database user |
-| `POSTGRES_PASSWORD` | `assistant` | Database password |
-| `POSTGRES_DB` | `assistant` | Database name |
-| `POSTGRES_HOST` | `localhost` | Database host |
-| `POSTGRES_PORT` | `5432` | Database port |
-| `APP_HOST` | `0.0.0.0` | Server bind address |
-| `APP_PORT` | `8000` | Server port |
-| `APP_RELOAD` | `true` | Hot reload (disable in production) |
-| `POLICY_DIR` | `policy` | Path to policy YAML files |
-| `ARTIFACTS_DIR` | `artifacts` | Path to audit artifact storage |
-| `LOG_LEVEL` | `INFO` | Logging level |
-| `DB_ECHO` | `false` | Echo SQL statements (debug) |
+MIT

@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class GroupRead(BaseModel):
+    """Read-only representation of a professional group returned by the API."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

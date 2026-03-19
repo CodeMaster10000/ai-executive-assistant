@@ -10,9 +10,12 @@ from app.agents.schemas import CEOOutput
 
 
 class CEOAgent(LLMAgent):
+    """Provides strategic career recommendations from formatted opportunity data."""
+
     agent_name = "ceo"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Analyze formatted data and return strategic recommendations with a summary."""
         if self._llm is None:
             return {
                 "strategic_recommendations": [

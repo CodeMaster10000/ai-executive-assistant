@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Event(Base):
+    """Industry event or conference discovered during a pipeline run."""
+
     __tablename__ = "events"
 
     id: Mapped[str] = mapped_column(

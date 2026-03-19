@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Group(Base):
+    """Professional community or group discovered during a pipeline run."""
+
     __tablename__ = "groups"
 
     id: Mapped[str] = mapped_column(

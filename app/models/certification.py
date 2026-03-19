@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class Certification(Base):
+    """Professional certification opportunity found during a pipeline run."""
+
     __tablename__ = "certifications"
 
     id: Mapped[str] = mapped_column(

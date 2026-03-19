@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 # -- GoalExtractor output --
 
 class GoalExtractorOutput(BaseModel):
+    """Structured output from the GoalExtractor agent containing search prompts per category."""
+
     cert_prompt: str = Field(description="Full directive sentence to find certifications and courses, e.g. 'Search for AWS certifications and architecture courses for a Java developer'")
     event_prompt: str = Field(description="Full directive sentence to find events and conferences, e.g. 'Find 2026 software architecture and AI conferences in Europe'")
     group_prompt: str = Field(description="Full directive sentence to find professional communities and groups, e.g. 'Search Discord, Reddit, and LinkedIn for Java and cloud computing communities'")
@@ -16,6 +18,8 @@ class GoalExtractorOutput(BaseModel):
 # -- WebScraper output --
 
 class WebScraperResult(BaseModel):
+    """A single web search result with title, URL, snippet, and source."""
+
     title: str = Field(description="Title of the search result")
     url: str = Field(default="", description="URL of the search result")
     snippet: str = Field(default="", description="Brief excerpt or description")
@@ -23,12 +27,16 @@ class WebScraperResult(BaseModel):
 
 
 class WebScraperOutput(BaseModel):
+    """Structured output from the WebScraper agent containing a list of search results."""
+
     results: list[WebScraperResult] = Field(default_factory=list)
 
 
 # -- DataFormatter sub-models --
 
 class FormattedJob(BaseModel):
+    """A job posting normalized into a consistent structure."""
+
     title: str
     company: str | None = None
     url: str | None = None
@@ -37,6 +45,8 @@ class FormattedJob(BaseModel):
     salary_range: str | None = None
 
 class FormattedCertification(BaseModel):
+    """A certification opportunity normalized into a consistent structure."""
+
     title: str
     provider: str | None = None
     url: str | None = None
@@ -45,6 +55,8 @@ class FormattedCertification(BaseModel):
     duration: str | None = None
 
 class FormattedCourse(BaseModel):
+    """A course or training program normalized into a consistent structure."""
+
     title: str
     platform: str | None = None
     url: str | None = None
@@ -53,6 +65,8 @@ class FormattedCourse(BaseModel):
     duration: str | None = None
 
 class FormattedEvent(BaseModel):
+    """A conference or event normalized into a consistent structure."""
+
     title: str
     organizer: str | None = None
     url: str | None = None
@@ -61,6 +75,8 @@ class FormattedEvent(BaseModel):
     location: str | None = None
 
 class FormattedGroup(BaseModel):
+    """A professional community or group normalized into a consistent structure."""
+
     title: str
     platform: str | None = None
     url: str | None = None
@@ -68,6 +84,8 @@ class FormattedGroup(BaseModel):
     member_count: int | None = None
 
 class FormattedTrend(BaseModel):
+    """An industry trend or market development normalized into a consistent structure."""
+
     title: str
     category: str | None = None
     url: str | None = None
@@ -76,6 +94,8 @@ class FormattedTrend(BaseModel):
     source: str | None = None
 
 class DataFormatterOutput(BaseModel):
+    """Structured output from the DataFormatter agent with all formatted categories."""
+
     jobs: list[FormattedJob] = Field(default_factory=list)
     certifications: list[FormattedCertification] = Field(default_factory=list)
     courses: list[FormattedCourse] = Field(default_factory=list)
@@ -87,11 +107,15 @@ class DataFormatterOutput(BaseModel):
 # -- CEO output --
 
 class StrategicRecommendation(BaseModel):
+    """A single strategic recommendation from the CEO agent."""
+
     area: str = Field(description="Area of recommendation (e.g. 'career move', 'skill gap')")
     recommendation: str = Field(description="Actionable recommendation")
     priority: str = Field(description="high, medium, or low")
 
 class CEOOutput(BaseModel):
+    """Structured output from the CEO agent with strategic recommendations and summary."""
+
     strategic_recommendations: list[StrategicRecommendation] = Field(default_factory=list)
     ceo_summary: str = Field(description="Executive summary of strategic outlook")
 
@@ -99,11 +123,15 @@ class CEOOutput(BaseModel):
 # -- CFO output --
 
 class RiskAssessment(BaseModel):
+    """A single risk assessment from the CFO agent."""
+
     area: str = Field(description="Area being assessed")
     risk_level: str = Field(description="low, medium, or high")
     time_investment: str = Field(description="Estimated time commitment")
     roi_estimate: str = Field(description="low, medium, or high")
 
 class CFOOutput(BaseModel):
+    """Structured output from the CFO agent with risk assessments and summary."""
+
     risk_assessments: list[RiskAssessment] = Field(default_factory=list)
     cfo_summary: str = Field(description="Financial/risk summary")

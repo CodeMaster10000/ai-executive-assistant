@@ -21,7 +21,7 @@ const AGENTS_BY_MODE: Record<string, string[]> = {
   cover_letter: ["cover_letter_agent", "audit_writer"],
 }
 
-type AgentStatus = "idle" | "running" | "complete"
+type AgentStatus = "idle" | "running" | "complete" | "partial" | "failed"
 
 function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, AgentStatus> {
   const agents = AGENTS_BY_MODE[mode] ?? AGENTS_BY_MODE.daily
@@ -29,7 +29,15 @@ function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, A
   for (const name of agents) statuses[name] = "idle"
   for (const e of events) {
     if (e.agent && e.type === "agent_started") statuses[e.agent] = "running"
-    if (e.agent && e.type === "agent_completed") statuses[e.agent] = "complete"
+    if (e.agent && e.type === "agent_completed") {
+      if (e.verification_status === "fail") {
+        statuses[e.agent] = "failed"
+      } else if (e.verification_status === "partial") {
+        statuses[e.agent] = "partial"
+      } else {
+        statuses[e.agent] = "complete"
+      }
+    }
   }
   return statuses
 }
@@ -163,9 +171,13 @@ export default function RunDetailPage() {
                       className={
                         s === "complete"
                           ? "h-2 w-2 rounded-full bg-green-500"
-                          : s === "running"
-                            ? "h-2 w-2 rounded-full bg-blue-500 animate-pulse"
-                            : "h-2 w-2 rounded-full bg-gray-300"
+                          : s === "partial"
+                            ? "h-2 w-2 rounded-full bg-yellow-500"
+                            : s === "failed"
+                              ? "h-2 w-2 rounded-full bg-red-500"
+                              : s === "running"
+                                ? "h-2 w-2 rounded-full bg-blue-500 animate-pulse"
+                                : "h-2 w-2 rounded-full bg-gray-300"
                       }
                     />
                     {name.replace(/_/g, " ")}
@@ -227,6 +239,7 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
   const dotColor: Record<string, string> = {
     agent_start: "bg-blue-500",
     agent_end: "bg-green-500",
+    verifier_result: "bg-yellow-500",
     error: "bg-red-500",
   }
 

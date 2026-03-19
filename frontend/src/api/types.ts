@@ -175,6 +175,8 @@ export interface SSEEvent {
   error?: string
   timestamp?: string
   mode?: string
+  verification_status?: string | null
+  elapsed?: number
 }
 
 export interface AuditEvent {

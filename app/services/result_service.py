@@ -21,6 +21,7 @@ from app.schemas.trend import TrendRead
 async def list_jobs(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[JobOpportunityRead]:
+    """List job opportunities for a profile, optionally filtered by run."""
     stmt = (
         select(JobOpportunity)
         .where(JobOpportunity.profile_id == profile_id)
@@ -44,6 +45,7 @@ async def list_jobs(
 async def list_certifications(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[CertificationRead]:
+    """List certifications for a profile, optionally filtered by run."""
     stmt = (
         select(Certification)
         .where(Certification.profile_id == profile_id)
@@ -66,6 +68,7 @@ async def list_certifications(
 async def list_courses(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[CourseRead]:
+    """List courses for a profile, optionally filtered by run."""
     stmt = (
         select(Course)
         .where(Course.profile_id == profile_id)
@@ -88,6 +91,7 @@ async def list_courses(
 async def list_events(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[EventRead]:
+    """List events for a profile, optionally filtered by run."""
     stmt = (
         select(Event)
         .where(Event.profile_id == profile_id)
@@ -110,6 +114,7 @@ async def list_events(
 async def list_groups(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[GroupRead]:
+    """List groups for a profile, optionally filtered by run."""
     stmt = (
         select(Group)
         .where(Group.profile_id == profile_id)
@@ -132,6 +137,7 @@ async def list_groups(
 async def list_trends(
     db: AsyncSession, profile_id: str, run_id: str | None = None
 ) -> list[TrendRead]:
+    """List trends for a profile, optionally filtered by run."""
     stmt = (
         select(Trend)
         .where(Trend.profile_id == profile_id)
@@ -166,6 +172,7 @@ async def _get_by_id(db: AsyncSession, model_cls, profile_id: str, item_id: str)
 async def update_result_title(
     db: AsyncSession, model_cls, profile_id: str, item_id: str, title: str
 ):
+    """Update the title of a result item. Returns None if not found."""
     item = await _get_by_id(db, model_cls, profile_id, item_id)
     if item is None:
         return None
@@ -178,6 +185,7 @@ async def update_result_title(
 async def delete_result(
     db: AsyncSession, model_cls, profile_id: str, item_id: str
 ) -> bool:
+    """Delete a result item by ID. Returns True if deleted, False if not found."""
     item = await _get_by_id(db, model_cls, profile_id, item_id)
     if item is None:
         return False
@@ -189,6 +197,7 @@ async def delete_result(
 async def count_cover_letters_for_job(
     db: AsyncSession, profile_id: str, job_id: str
 ) -> int:
+    """Return the number of cover letters linked to a job opportunity."""
     result = await db.execute(
         select(func.count()).where(
             CoverLetter.job_opportunity_id == job_id,
@@ -201,6 +210,7 @@ async def count_cover_letters_for_job(
 async def delete_job_cascade(
     db: AsyncSession, profile_id: str, job_id: str
 ) -> bool:
+    """Delete a job and its linked cover letters. Returns False if job not found."""
     job = await _get_by_id(db, JobOpportunity, profile_id, job_id)
     if job is None:
         return False

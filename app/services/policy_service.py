@@ -15,6 +15,7 @@ def _load_policy(path: Path) -> dict:
 
 
 def list_policies() -> list[PolicyRead]:
+    """Return all YAML policy files as PolicyRead objects."""
     policy_dir = settings.policy_dir
     if not policy_dir.is_dir():
         return []

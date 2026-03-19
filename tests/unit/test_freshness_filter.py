@@ -109,5 +109,5 @@ class TestFreshnessFilter:
         """Passing None config uses default patterns."""
         f = FreshnessFilter(None)
         results = [{"title": "Job", "snippet": "This job has expired", "url": "https://a.com"}]
-        kept, removed = f.filter_results(results, "job")
+        _, removed = f.filter_results(results, "job")
         assert len(removed) == 1

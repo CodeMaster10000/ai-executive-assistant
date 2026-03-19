@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class CertificationRead(BaseModel):
+    """Read-only representation of a certification opportunity returned by the API."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

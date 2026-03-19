@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class JobOpportunityRead(BaseModel):
+    """Read-only representation of a job opportunity returned by the API."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

@@ -11,6 +11,10 @@ import sqlalchemy as sa
 
 from alembic import op
 
+# Foreign key target constants
+_FK_USER_PROFILES_ID = "user_profiles.id"
+_FK_RUNS_ID = "runs.id"
+
 # revision identifiers, used by Alembic.
 revision: str = "001"
 down_revision: Union[str, None] = None
@@ -37,7 +41,7 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column("mode", sa.String(50), nullable=False),
@@ -55,11 +59,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("company", sa.String(500), nullable=True),
@@ -82,11 +86,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("provider", sa.String(500), nullable=True),
@@ -108,11 +112,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("platform", sa.String(500), nullable=True),
@@ -132,11 +136,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("organizer", sa.String(500), nullable=True),
@@ -156,11 +160,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("platform", sa.String(500), nullable=True),
@@ -179,11 +183,11 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=False
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=False
         ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("category", sa.String(500), nullable=True),
@@ -203,7 +207,7 @@ def upgrade() -> None:
         sa.Column(
             "profile_id",
             sa.String(36),
-            sa.ForeignKey("user_profiles.id"),
+            sa.ForeignKey(_FK_USER_PROFILES_ID),
             nullable=False,
         ),
         sa.Column(
@@ -213,7 +217,7 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column(
-            "run_id", sa.String(36), sa.ForeignKey("runs.id"), nullable=True
+            "run_id", sa.String(36), sa.ForeignKey(_FK_RUNS_ID), nullable=True
         ),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),

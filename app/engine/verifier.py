@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationStatus(str, Enum):
+    """Outcome of a single verification check or an aggregate result."""
+
     PASS = "pass"
     PARTIAL = "partial"
     FAIL = "fail"
@@ -32,6 +34,8 @@ class VerificationStatus(str, Enum):
 
 @dataclass
 class CheckResult:
+    """Result of a single named verification check."""
+
     check_name: str
     status: VerificationStatus
     message: str
@@ -40,6 +44,8 @@ class CheckResult:
 
 @dataclass
 class AgentVerification:
+    """Aggregated verification result for a single agent's output."""
+
     agent_name: str
     status: VerificationStatus
     checks: list[CheckResult]
@@ -60,6 +66,8 @@ class VerificationError(Exception):
 # ------------------------------------------------------------------
 # Verifier
 # ------------------------------------------------------------------
+
+_ALL_CHECKS_PASSED = "All checks passed"
 
 _EXPECTED_SEARCH_PROMPT_KEYS = {"job_prompt", "cert_prompt", "event_prompt", "group_prompt", "trend_prompt"}
 
@@ -231,61 +239,19 @@ class Verifier:
             items = output.get(key)
             if items is None:
                 continue
-            if not isinstance(items, list):
-                checks.append(CheckResult(
-                    f"{key}_type", VerificationStatus.FAIL,
-                    f"{key} must be a list, got {type(items).__name__}",
-                ))
+            valid, key_checks = self._validate_item_list(key, items)
+            checks.extend(key_checks)
+            if not valid:
                 continue
 
-            for item in items:
-                if not isinstance(item, dict):
-                    checks.append(CheckResult(
-                        f"{key}_item_type", VerificationStatus.FAIL,
-                        f"Items in {key} must be dicts",
-                    ))
-                    break
-
             total_items += len(items)
-
-            # Title check
-            missing_title = [i for i, item in enumerate(items) if isinstance(item, dict) and not item.get("title")]
-            if missing_title:
-                checks.append(CheckResult(
-                    f"{key}_titles", VerificationStatus.PARTIAL,
-                    f"{len(missing_title)} item(s) in {key} missing title",
-                    details={"indices": missing_title},
-                ))
-
-            # Duplicate URL check
-            urls = [item.get("url") for item in items if isinstance(item, dict) and item.get("url")]
-            dups = [u for u in set(urls) if urls.count(u) > 1]
-            if dups:
-                checks.append(CheckResult(
-                    f"{key}_dedup", VerificationStatus.PARTIAL,
-                    f"Duplicate URLs in {key}: {len(dups)} unique duplicates",
-                    details={"duplicate_urls": dups},
-                ))
+            checks.extend(self._check_missing_titles(key, items, VerificationStatus.PARTIAL))
+            checks.extend(self._check_duplicate_urls(key, items))
 
         # Bounds check
-        limit = self._max_output_items
-        if total_items > limit * 2:
-            checks.append(CheckResult(
-                "output_bounds", VerificationStatus.FAIL,
-                f"Total items ({total_items}) exceeds 2x limit ({limit * 2})",
-                details={"total": total_items, "limit": limit},
-            ))
-        elif total_items > limit:
-            checks.append(CheckResult(
-                "output_bounds", VerificationStatus.PARTIAL,
-                f"Total items ({total_items}) exceeds limit ({limit})",
-                details={"total": total_items, "limit": limit},
-            ))
-        else:
-            checks.append(CheckResult(
-                "output_bounds", VerificationStatus.PASS,
-                f"Total items ({total_items}) within limit ({limit})",
-            ))
+        checks.append(self._check_output_bounds(
+            total_items, "Total items", include_soft_warning=True,
+        ))
 
         # Freshness check for job results
         job_items = output.get("raw_job_results")
@@ -293,7 +259,7 @@ class Verifier:
             checks.append(self._check_job_freshness(job_items))
 
         if not checks:
-            checks.append(CheckResult("web_scrapers_general", VerificationStatus.PASS, "All checks passed"))
+            checks.append(CheckResult("web_scrapers_general", VerificationStatus.PASS, _ALL_CHECKS_PASSED))
 
         return checks
 
@@ -305,61 +271,22 @@ class Verifier:
             items = output.get(key)
             if items is None:
                 continue
-            if not isinstance(items, list):
-                checks.append(CheckResult(
-                    f"{key}_type", VerificationStatus.FAIL,
-                    f"{key} must be a list, got {type(items).__name__}",
-                ))
+            valid, key_checks = self._validate_item_list(key, items)
+            checks.extend(key_checks)
+            if not valid:
                 continue
 
-            for item in items:
-                if not isinstance(item, dict):
-                    checks.append(CheckResult(
-                        f"{key}_item_type", VerificationStatus.FAIL,
-                        f"Items in {key} must be dicts",
-                    ))
-                    break
-
             total_items += len(items)
-
-            # Title non-empty check (hard fail)
-            missing_title = [
-                i for i, item in enumerate(items)
-                if isinstance(item, dict) and not item.get("title")
-            ]
-            if missing_title:
-                checks.append(CheckResult(
-                    f"{key}_titles", VerificationStatus.FAIL,
-                    f"{len(missing_title)} item(s) in {key} missing title",
-                    details={"indices": missing_title},
-                ))
-
-            # Duplicate title check within category
-            titles = [item.get("title") for item in items if isinstance(item, dict) and item.get("title")]
-            dup_titles = [t for t in set(titles) if titles.count(t) > 1]
-            if dup_titles:
-                checks.append(CheckResult(
-                    f"{key}_dedup", VerificationStatus.PARTIAL,
-                    f"Duplicate titles in {key}: {len(dup_titles)} unique duplicates",
-                    details={"duplicate_titles": dup_titles},
-                ))
+            checks.extend(self._check_missing_titles(key, items, VerificationStatus.FAIL))
+            checks.extend(self._check_duplicate_titles(key, items))
 
         # Total bounds
-        limit = self._max_output_items
-        if total_items > limit * 2:
-            checks.append(CheckResult(
-                "output_bounds", VerificationStatus.FAIL,
-                f"Total formatted items ({total_items}) exceeds 2x limit ({limit * 2})",
-                details={"total": total_items, "limit": limit},
-            ))
-        else:
-            checks.append(CheckResult(
-                "output_bounds", VerificationStatus.PASS,
-                f"Total formatted items ({total_items}) within limit",
-            ))
+        checks.append(self._check_output_bounds(
+            total_items, "Total formatted items", include_soft_warning=False,
+        ))
 
         if not checks:
-            checks.append(CheckResult("data_formatter_general", VerificationStatus.PASS, "All checks passed"))
+            checks.append(CheckResult("data_formatter_general", VerificationStatus.PASS, _ALL_CHECKS_PASSED))
 
         return checks
 
@@ -373,27 +300,7 @@ class Verifier:
                 "strategic_recommendations must be a list",
             ))
         else:
-            for i, rec in enumerate(recs):
-                if not isinstance(rec, dict):
-                    checks.append(CheckResult(
-                        f"recommendation_{i}_type", VerificationStatus.FAIL,
-                        f"Recommendation {i} must be a dict",
-                    ))
-                    continue
-                missing = [f for f in ("area", "recommendation", "priority") if f not in rec]
-                if missing:
-                    checks.append(CheckResult(
-                        f"recommendation_{i}_fields", VerificationStatus.PARTIAL,
-                        f"Recommendation {i} missing fields: {missing}",
-                        details={"index": i, "missing": missing},
-                    ))
-                priority = rec.get("priority", "")
-                if isinstance(priority, str) and priority not in ("high", "medium", "low"):
-                    checks.append(CheckResult(
-                        f"recommendation_{i}_priority", VerificationStatus.PARTIAL,
-                        f"Recommendation {i} has invalid priority: '{priority}'",
-                        details={"index": i, "priority": priority},
-                    ))
+            checks.extend(self._validate_recommendations(recs))
 
         summary = output.get("ceo_summary")
         if not isinstance(summary, str) or not summary.strip():
@@ -408,7 +315,7 @@ class Verifier:
             ))
 
         if not checks:
-            checks.append(CheckResult("ceo_general", VerificationStatus.PASS, "All checks passed"))
+            checks.append(CheckResult("ceo_general", VerificationStatus.PASS, _ALL_CHECKS_PASSED))
 
         return checks
 
@@ -450,7 +357,7 @@ class Verifier:
             ))
 
         if not checks:
-            checks.append(CheckResult("cfo_general", VerificationStatus.PASS, "All checks passed"))
+            checks.append(CheckResult("cfo_general", VerificationStatus.PASS, _ALL_CHECKS_PASSED))
 
         return checks
 
@@ -512,6 +419,132 @@ class Verifier:
             VerificationStatus.PASS,
             "No expiry signals in job results",
         )
+
+    # ------------------------------------------------------------------
+    # Shared item-list helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_item_list(key: str, items: Any) -> tuple[bool, list[CheckResult]]:
+        """Validate that *items* is a list of dicts.
+
+        Returns ``(valid, checks)`` where *valid* is ``False`` when the
+        caller should skip further per-item checks for this key.
+        """
+        checks: list[CheckResult] = []
+        if not isinstance(items, list):
+            checks.append(CheckResult(
+                f"{key}_type", VerificationStatus.FAIL,
+                f"{key} must be a list, got {type(items).__name__}",
+            ))
+            return False, checks
+
+        for item in items:
+            if not isinstance(item, dict):
+                checks.append(CheckResult(
+                    f"{key}_item_type", VerificationStatus.FAIL,
+                    f"Items in {key} must be dicts",
+                ))
+                break
+
+        return True, checks
+
+    @staticmethod
+    def _check_missing_titles(
+        key: str, items: list[dict[str, Any]], severity: VerificationStatus,
+    ) -> list[CheckResult]:
+        """Return a check if any dict item in *items* is missing a title."""
+        missing_title = [
+            i for i, item in enumerate(items)
+            if isinstance(item, dict) and not item.get("title")
+        ]
+        if missing_title:
+            return [CheckResult(
+                f"{key}_titles", severity,
+                f"{len(missing_title)} item(s) in {key} missing title",
+                details={"indices": missing_title},
+            )]
+        return []
+
+    @staticmethod
+    def _check_duplicate_urls(key: str, items: list[dict[str, Any]]) -> list[CheckResult]:
+        """Return a PARTIAL check if duplicate URLs exist in *items*."""
+        urls = [item.get("url") for item in items if isinstance(item, dict) and item.get("url")]
+        dups = [u for u in set(urls) if urls.count(u) > 1]
+        if dups:
+            return [CheckResult(
+                f"{key}_dedup", VerificationStatus.PARTIAL,
+                f"Duplicate URLs in {key}: {len(dups)} unique duplicates",
+                details={"duplicate_urls": dups},
+            )]
+        return []
+
+    @staticmethod
+    def _check_duplicate_titles(key: str, items: list[dict[str, Any]]) -> list[CheckResult]:
+        """Return a PARTIAL check if duplicate titles exist in *items*."""
+        titles = [item.get("title") for item in items if isinstance(item, dict) and item.get("title")]
+        dup_titles = [t for t in set(titles) if titles.count(t) > 1]
+        if dup_titles:
+            return [CheckResult(
+                f"{key}_dedup", VerificationStatus.PARTIAL,
+                f"Duplicate titles in {key}: {len(dup_titles)} unique duplicates",
+                details={"duplicate_titles": dup_titles},
+            )]
+        return []
+
+    def _check_output_bounds(
+        self, total_items: int, label: str, *, include_soft_warning: bool,
+    ) -> CheckResult:
+        """Return a single bounds check for *total_items* against the policy limit.
+
+        When *include_soft_warning* is ``True`` a PARTIAL result is returned
+        for counts between ``limit`` and ``2 * limit`` (used by web_scrapers).
+        Otherwise only the hard 2x fail and pass branches apply.
+        """
+        limit = self._max_output_items
+        if total_items > limit * 2:
+            return CheckResult(
+                "output_bounds", VerificationStatus.FAIL,
+                f"{label} ({total_items}) exceeds 2x limit ({limit * 2})",
+                details={"total": total_items, "limit": limit},
+            )
+        if include_soft_warning and total_items > limit:
+            return CheckResult(
+                "output_bounds", VerificationStatus.PARTIAL,
+                f"{label} ({total_items}) exceeds limit ({limit})",
+                details={"total": total_items, "limit": limit},
+            )
+        return CheckResult(
+            "output_bounds", VerificationStatus.PASS,
+            f"{label} ({total_items}) within limit" + (f" ({limit})" if include_soft_warning else ""),
+        )
+
+    @staticmethod
+    def _validate_recommendations(recs: list[Any]) -> list[CheckResult]:
+        """Validate a list of CEO strategic recommendation dicts."""
+        checks: list[CheckResult] = []
+        for i, rec in enumerate(recs):
+            if not isinstance(rec, dict):
+                checks.append(CheckResult(
+                    f"recommendation_{i}_type", VerificationStatus.FAIL,
+                    f"Recommendation {i} must be a dict",
+                ))
+                continue
+            missing = [f for f in ("area", "recommendation", "priority") if f not in rec]
+            if missing:
+                checks.append(CheckResult(
+                    f"recommendation_{i}_fields", VerificationStatus.PARTIAL,
+                    f"Recommendation {i} missing fields: {missing}",
+                    details={"index": i, "missing": missing},
+                ))
+            priority = rec.get("priority", "")
+            if isinstance(priority, str) and priority not in ("high", "medium", "low"):
+                checks.append(CheckResult(
+                    f"recommendation_{i}_priority", VerificationStatus.PARTIAL,
+                    f"Recommendation {i} has invalid priority: '{priority}'",
+                    details={"index": i, "priority": priority},
+                ))
+        return checks
 
     # ------------------------------------------------------------------
     # Helpers

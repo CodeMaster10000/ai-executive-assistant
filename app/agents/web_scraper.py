@@ -34,6 +34,7 @@ class WebScraperAgent(LLMAgent):
         self._freshness_filter = freshness_filter
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Execute a web search for the given category and return raw results."""
         prompt = state.get("search_prompt", "")
         category = state.get("search_category", "")
         result_key = f"raw_{category}_results"

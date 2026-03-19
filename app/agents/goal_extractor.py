@@ -11,9 +11,12 @@ from app.agents.schemas import GoalExtractorOutput
 
 
 class GoalExtractorAgent(LLMAgent):
+    """Converts profile targets, skills, and CV into category-specific search prompts."""
+
     agent_name = "goal_extractor"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Generate search prompts for each category from the profile state."""
         targets = state.get("profile_targets", [])
         skills = state.get("profile_skills", [])
         constraints = state.get("profile_constraints", [])

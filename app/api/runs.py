@@ -13,6 +13,8 @@ from app.schemas.run import RunCreate, RunRead
 from app.services import run_service
 from app.sse import event_manager
 
+_RUN_NOT_FOUND = "Run not found"
+
 router = APIRouter(tags=["runs"])
 
 
@@ -68,7 +70,7 @@ async def get_run(
     """Get details of a single run."""
     result = await run_service.get_run(db, profile_id, run_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+        raise HTTPException(status_code=404, detail=_RUN_NOT_FOUND)
     return result
 
 
@@ -98,7 +100,7 @@ async def cancel_run(
     try:
         return await run_service.cancel_run(db, profile_id, run_id)
     except LookupError:
-        raise HTTPException(status_code=404, detail="Run not found")
+        raise HTTPException(status_code=404, detail=_RUN_NOT_FOUND)
     except ValueError:
         raise HTTPException(status_code=409, detail="Run is not currently executing")
 
@@ -119,7 +121,7 @@ async def delete_run(
     try:
         await run_service.delete_run(db, profile_id, run_id)
     except LookupError:
-        raise HTTPException(status_code=404, detail="Run not found")
+        raise HTTPException(status_code=404, detail=_RUN_NOT_FOUND)
     except ValueError:
         raise HTTPException(status_code=409, detail="Cannot delete a run that is still executing")
     return {"detail": "Deleted"}

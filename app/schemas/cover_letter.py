@@ -4,11 +4,15 @@ from pydantic import BaseModel
 
 
 class CoverLetterCreate(BaseModel):
+    """Request body for generating a new cover letter."""
+
     job_opportunity_id: str | None = None
     jd_text: str | None = None
 
 
 class CoverLetterRead(BaseModel):
+    """Read-only representation of a generated cover letter returned by the API."""
+
     id: str
     profile_id: str
     job_opportunity_id: str | None = None

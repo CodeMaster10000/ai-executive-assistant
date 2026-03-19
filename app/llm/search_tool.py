@@ -55,12 +55,12 @@ class SafeDuckDuckGoSearchTool(BaseTool):
         from ddgs import DDGS
 
         try:
-            kwargs: dict[str, Any] = dict(
-                region=self.region,
-                safesearch="moderate",
-                max_results=self.max_results,
-                backend=self._backend,
-            )
+            kwargs: dict[str, Any] = {
+                "region": self.region,
+                "safesearch": "moderate",
+                "max_results": self.max_results,
+                "backend": self._backend,
+            }
             if self.timelimit:
                 kwargs["timelimit"] = self.timelimit
             with DDGS() as ddgs:

@@ -63,8 +63,8 @@ export function SidebarContent() {
   return (
     <div className="flex flex-col h-full bg-sidebar p-4">
       <div className="mb-6">
-        <h2 className="text-lg font-bold tracking-tight px-3 text-primary">AI Assistant</h2>
-        <p className="text-xs text-muted-foreground px-3">Executive Network</p>
+        <h2 className="text-lg font-bold tracking-tight px-3 text-primary">Stratoseer</h2>
+        <p className="text-xs text-muted-foreground px-3">Career Intelligence</p>
       </div>
 
       <nav className="flex flex-col gap-1">

@@ -34,6 +34,7 @@ _background_tasks: set[asyncio.Task] = set()
 def cl_to_read(
     cl: CoverLetter, job: JobOpportunity | None = None
 ) -> CoverLetterRead:
+    """Convert a CoverLetter ORM instance to a CoverLetterRead schema."""
     return CoverLetterRead(
         id=cl.id,
         profile_id=cl.profile_id,
@@ -166,10 +167,15 @@ async def generate_cover_letter(
             ),
         )
 
+        from app.engine.verifier import Verifier
+        verifier = Verifier(policy_engine=policy_engine)
+
         graph = build_cover_letter_graph(
             policy_engine=policy_engine,
             audit_writer=audit_writer,
             agent_factory=get_agent_factory(),
+            verifier=verifier,
+            event_manager=event_manager,
         )
         compiled = graph.compile()
 

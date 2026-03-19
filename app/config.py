@@ -4,9 +4,12 @@ from pydantic_settings import BaseSettings
 
 # Project root: two levels up from app/config.py
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_AGENT_MODEL = "gpt-5.4-mini"
 
 
 class Settings(BaseSettings):
+    """Application settings loaded from environment variables and .env file."""
+
     # Database
     postgres_user: str = "assistant"
     postgres_password: str = "assistant"
@@ -44,10 +47,10 @@ class Settings(BaseSettings):
     # Per-agent model overrides (blank = use llm_model default)
     goal_extractor_model: str = "gpt-5.4"
     web_scraper_model: str = "gpt-5.4"
-    data_formatter_model: str = "gpt-5.4-mini"
-    ceo_model: str = "gpt-5.4-mini"
-    cfo_model: str = "gpt-5.4-mini"
-    cover_letter_model: str = "gpt-5.4-mini"
+    data_formatter_model: str = _DEFAULT_AGENT_MODEL
+    ceo_model: str = _DEFAULT_AGENT_MODEL
+    cfo_model: str = _DEFAULT_AGENT_MODEL
+    cover_letter_model: str = _DEFAULT_AGENT_MODEL
 
     # Search
     search_max_results: int = 10
@@ -60,6 +63,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        """Return the async PostgreSQL connection URL (asyncpg driver)."""
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -67,6 +71,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
+        """Return the synchronous PostgreSQL connection URL."""
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"

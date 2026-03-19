@@ -60,14 +60,17 @@ class PolicyEngine:
 
     @property
     def version(self) -> PolicyVersion:
+        """Return the current policy version snapshot with content hash."""
         return PolicyVersion(hash=self._version_hash, policies=dict(self._policies))
 
     def get_policy(self, name: str) -> dict[str, Any]:
+        """Return the parsed policy dict for the given name, or raise KeyError."""
         if name not in self._policies:
             raise KeyError(f"Policy '{name}' not found")
         return self._policies[name]
 
     def list_policies(self) -> list[str]:
+        """Return the names of all loaded policies."""
         return list(self._policies.keys())
 
     # ------------------------------------------------------------------
@@ -120,6 +123,7 @@ class PolicyEngine:
     # ------------------------------------------------------------------
 
     def get_budget(self, agent: str) -> Budget:
+        """Return the step/token budget for the given agent, or raise KeyError."""
         budgets_policy = self._policies.get("budgets", {})
         agent_config = budgets_policy.get("agents", {}).get(agent)
         if agent_config is None:
@@ -134,6 +138,7 @@ class PolicyEngine:
     # ------------------------------------------------------------------
 
     def get_boundaries(self, agent: str) -> dict[str, list[str]]:
+        """Return allowed input/output field names for the given agent, or raise KeyError."""
         boundaries_policy = self._policies.get("boundaries", {})
         agent_config = boundaries_policy.get("agents", {}).get(agent)
         if agent_config is None:
@@ -145,6 +150,7 @@ class PolicyEngine:
     # ------------------------------------------------------------------
 
     def get_redaction_rules(self) -> list[dict[str, Any]]:
+        """Return all configured PII redaction rules."""
         redaction_policy = self._policies.get("redaction", {})
         return redaction_policy.get("rules", [])
 
@@ -160,5 +166,6 @@ class PolicyEngine:
     # ------------------------------------------------------------------
 
     def get_global_config(self) -> dict[str, Any]:
+        """Return the global section of the budgets policy."""
         budgets_policy = self._policies.get("budgets", {})
         return budgets_policy.get("global", {})

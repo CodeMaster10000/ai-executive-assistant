@@ -42,4 +42,5 @@ class PromptLoader:
         return template
 
     def clear_cache(self) -> None:
+        """Remove all cached prompt templates, forcing a reload on next access."""
         self._cache.clear()

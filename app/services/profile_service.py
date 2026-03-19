@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 class ExtractedSkills(BaseModel):
+    """Response model containing a list of extracted skills."""
+
     skills: list[str]
 
 
@@ -61,6 +63,7 @@ def profile_to_read(profile: UserProfile) -> ProfileRead:
 
 
 async def create_profile(db: AsyncSession, body: ProfileCreate) -> ProfileRead:
+    """Create a new profile and return its read representation."""
     profile = UserProfile(
         name=body.name,
         targets=_serialize_list(body.targets),
@@ -74,6 +77,7 @@ async def create_profile(db: AsyncSession, body: ProfileCreate) -> ProfileRead:
 
 
 async def list_profiles(db: AsyncSession) -> list[ProfileRead]:
+    """List all profiles ordered by creation date."""
     result = await db.execute(select(UserProfile).order_by(UserProfile.created_at))
     profiles = result.scalars().all()
     return [profile_to_read(p) for p in profiles]

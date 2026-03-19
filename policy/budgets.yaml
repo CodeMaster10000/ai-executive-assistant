@@ -2,7 +2,7 @@ agents:
   goal_extractor:
     max_steps: 3
     max_tokens: 4000
-  web_scraper:
+  web_scrapers:
     max_steps: 5
     max_tokens: 4000
   data_formatter:

@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class JobOpportunity(Base):
+    """Job opportunity discovered by a scout during a pipeline run."""
+
     __tablename__ = "job_opportunities"
 
     id: Mapped[str] = mapped_column(

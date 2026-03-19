@@ -4,6 +4,7 @@ import pytest
 
 from app.agents.factory import AgentFactory
 from app.engine.audit_writer import AuditWriter
+from app.engine.verifier import Verifier
 from app.graphs.daily import build_daily_graph
 
 
@@ -73,7 +74,7 @@ class TestDailyPipeline:
         compiled = graph.compile()
 
         run_id = "test-run-audit"
-        result = await compiled.ainvoke({
+        await compiled.ainvoke({
             "profile_id": "test-profile",
             "profile_targets": ["python"],
             "profile_skills": [],
@@ -87,3 +88,44 @@ class TestDailyPipeline:
         bundle = await audit_writer.read_bundle(run_id)
         assert bundle is not None
         assert "jobs" in bundle["final_artifacts"]
+
+    @pytest.mark.asyncio
+    async def test_daily_pipeline_with_verifier(self, mock_factory, tmp_path):
+        audit_writer = AuditWriter(artifacts_dir=tmp_path / "artifacts")
+        verifier = Verifier()
+        graph = build_daily_graph(
+            audit_writer=audit_writer,
+            agent_factory=mock_factory,
+            verifier=verifier,
+        )
+        compiled = graph.compile()
+
+        run_id = "test-run-verified"
+        result = await compiled.ainvoke({
+            "profile_id": "test-profile",
+            "profile_targets": ["cloud", "devops"],
+            "profile_skills": ["python"],
+            "run_id": run_id,
+            "errors": [],
+            "safe_degradation": False,
+            "audit_events": [],
+        })
+
+        # Verifier results should be accumulated in state
+        assert "verifier_results" in result
+        assert len(result["verifier_results"]) > 0
+
+        # All mock agent outputs should pass verification
+        for vr in result["verifier_results"]:
+            assert vr["status"] == "pass", (
+                f"Agent {vr['agent_name']} verification failed: {vr}"
+            )
+
+        # Audit bundle should have a real verifier report
+        bundle = await audit_writer.read_bundle(run_id)
+        assert bundle is not None
+        report = bundle["verifier_report"]
+        assert report != {}
+        assert report["overall_status"] == "pass"
+        assert report["total_checks"] > 0
+        assert report["failures"] == 0

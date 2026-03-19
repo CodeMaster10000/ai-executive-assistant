@@ -26,6 +26,7 @@ logging.getLogger("app").setLevel(_log_level)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    """Create database tables on startup, then yield to the application."""
     # Create tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -54,6 +55,7 @@ app.include_router(policies.router, prefix="/api")
 # SPA catch-all: serve static files if they exist, otherwise index.html
 @app.get("/{full_path:path}")
 async def spa_catch_all(full_path: str):
+    """Serve SPA static files or fall back to index.html for client-side routing."""
     # Serve static files (e.g. favicon.svg) directly if present
     if full_path:
         static_file = spa_dir / full_path

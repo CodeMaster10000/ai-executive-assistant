@@ -5,11 +5,15 @@ from pydantic import BaseModel
 
 
 class RunCreate(BaseModel):
+    """Request body for starting a new pipeline run."""
+
     mode: Literal["daily", "weekly", "cover_letter"]
     options: dict | None = None
 
 
 class RunRead(BaseModel):
+    """Read-only representation of a pipeline run returned by the API."""
+
     id: str
     profile_id: str
     mode: str

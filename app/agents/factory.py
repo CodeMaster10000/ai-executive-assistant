@@ -92,9 +92,11 @@ class AgentFactory:
 
     @property
     def is_live(self) -> bool:
+        """Return True if agents will use a real LLM, False for mock mode."""
         return self._llm is not None
 
     def create_goal_extractor(self) -> AgentProtocol:
+        """Return the singleton GoalExtractorAgent, creating it on first call."""
         if self._goal_extractor is None:
             self._goal_extractor = GoalExtractorAgent(
                 llm=self._get_llm(self._agent_models.goal_extractor),
@@ -103,6 +105,7 @@ class AgentFactory:
         return self._goal_extractor
 
     def create_web_scraper(self) -> AgentProtocol:
+        """Return the singleton WebScraperAgent, creating it on first call."""
         if self._web_scraper is None:
             self._web_scraper = WebScraperAgent(
                 llm=self._get_llm(self._agent_models.web_scraper),
@@ -113,6 +116,7 @@ class AgentFactory:
         return self._web_scraper
 
     def create_data_formatter(self) -> AgentProtocol:
+        """Return the singleton DataFormatterAgent, creating it on first call."""
         if self._data_formatter is None:
             self._data_formatter = DataFormatterAgent(
                 llm=self._get_llm(self._agent_models.data_formatter),
@@ -121,6 +125,7 @@ class AgentFactory:
         return self._data_formatter
 
     def create_ceo(self) -> AgentProtocol:
+        """Return the singleton CEOAgent, creating it on first call."""
         if self._ceo is None:
             self._ceo = CEOAgent(
                 llm=self._get_llm(self._agent_models.ceo),
@@ -129,6 +134,7 @@ class AgentFactory:
         return self._ceo
 
     def create_cfo(self) -> AgentProtocol:
+        """Return the singleton CFOAgent, creating it on first call."""
         if self._cfo is None:
             self._cfo = CFOAgent(
                 llm=self._get_llm(self._agent_models.cfo),
@@ -137,6 +143,7 @@ class AgentFactory:
         return self._cfo
 
     def create_cover_letter_agent(self) -> AgentProtocol:
+        """Return the singleton CoverLetterAgent, creating it on first call."""
         if self._cover_letter is None:
             self._cover_letter = CoverLetterAgent(
                 llm=self._get_llm(self._agent_models.cover_letter),

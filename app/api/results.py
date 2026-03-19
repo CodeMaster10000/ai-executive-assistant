@@ -21,10 +21,14 @@ from app.schemas.job_opportunity import JobOpportunityRead
 from app.schemas.trend import TrendRead
 from app.services import result_service
 
+_ITEM_NOT_FOUND = "Item not found"
+
 router = APIRouter(tags=["results"])
 
 
 class ResultTitleUpdate(BaseModel):
+    """Request body for renaming a result item."""
+
     title: str
 
 
@@ -37,6 +41,7 @@ async def list_jobs(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[JobOpportunityRead]:
+    """List job opportunities for a profile, optionally filtered by run."""
     return await result_service.list_jobs(db, profile_id, run_id)
 
 
@@ -46,6 +51,7 @@ async def list_certifications(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[CertificationRead]:
+    """List certifications for a profile, optionally filtered by run."""
     return await result_service.list_certifications(db, profile_id, run_id)
 
 
@@ -55,6 +61,7 @@ async def list_courses(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[CourseRead]:
+    """List courses for a profile, optionally filtered by run."""
     return await result_service.list_courses(db, profile_id, run_id)
 
 
@@ -64,6 +71,7 @@ async def list_events(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[EventRead]:
+    """List events for a profile, optionally filtered by run."""
     return await result_service.list_events(db, profile_id, run_id)
 
 
@@ -73,6 +81,7 @@ async def list_groups(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[GroupRead]:
+    """List groups for a profile, optionally filtered by run."""
     return await result_service.list_groups(db, profile_id, run_id)
 
 
@@ -82,112 +91,144 @@ async def list_trends(
     db: Annotated[AsyncSession, Depends(get_db)],
     run_id: str | None = None,
 ) -> list[TrendRead]:
+    """List trends for a profile, optionally filtered by run."""
     return await result_service.list_trends(db, profile_id, run_id)
 
 
 # --- PATCH endpoints (rename title) ---
 
 
-@router.patch("/profiles/{profile_id}/results/jobs/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/jobs/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_job(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> JobOpportunityRead:
+    """Rename a job opportunity."""
     item = await result_service.update_result_title(
         db, JobOpportunity, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return JobOpportunityRead.model_validate(item)
 
 
-@router.patch("/profiles/{profile_id}/results/certifications/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/certifications/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_certification(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CertificationRead:
+    """Rename a certification."""
     item = await result_service.update_result_title(
         db, Certification, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return CertificationRead.model_validate(item)
 
 
-@router.patch("/profiles/{profile_id}/results/courses/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/courses/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_course(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CourseRead:
+    """Rename a course."""
     item = await result_service.update_result_title(
         db, Course, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return CourseRead.model_validate(item)
 
 
-@router.patch("/profiles/{profile_id}/results/events/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/events/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_event(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> EventRead:
+    """Rename an event."""
     item = await result_service.update_result_title(
         db, Event, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return EventRead.model_validate(item)
 
 
-@router.patch("/profiles/{profile_id}/results/groups/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/groups/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_group(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GroupRead:
+    """Rename a group."""
     item = await result_service.update_result_title(
         db, Group, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return GroupRead.model_validate(item)
 
 
-@router.patch("/profiles/{profile_id}/results/trends/{item_id}")
+@router.patch(
+    "/profiles/{profile_id}/results/trends/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def update_trend(
     profile_id: str,
     item_id: str,
     body: ResultTitleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TrendRead:
+    """Rename a trend."""
     item = await result_service.update_result_title(
         db, Trend, profile_id, item_id, body.title
     )
     if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return TrendRead.model_validate(item)
 
 
 # --- DELETE endpoints ---
 
 
-@router.delete("/profiles/{profile_id}/results/jobs/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/jobs/{item_id}",
+    responses={
+        404: {"description": "Item not found"},
+        409: {"description": "Job has cover letters"},
+    },
+)
 async def delete_job(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     force: bool = False,
 ) -> dict[str, str]:
+    """Delete a job opportunity. Use force=True to cascade-delete linked cover letters."""
     if not force:
         count = await result_service.count_cover_letters_for_job(db, profile_id, item_id)
         if count > 0:
@@ -197,65 +238,85 @@ async def delete_job(
             )
     if force:
         if not await result_service.delete_job_cascade(db, profile_id, item_id):
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     else:
         if not await result_service.delete_result(db, JobOpportunity, profile_id, item_id):
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}
 
 
-@router.delete("/profiles/{profile_id}/results/certifications/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/certifications/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def delete_certification(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
+    """Delete a certification."""
     if not await result_service.delete_result(
         db, Certification, profile_id, item_id
     ):
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}
 
 
-@router.delete("/profiles/{profile_id}/results/courses/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/courses/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def delete_course(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
+    """Delete a course."""
     if not await result_service.delete_result(db, Course, profile_id, item_id):
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}
 
 
-@router.delete("/profiles/{profile_id}/results/events/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/events/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def delete_event(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
+    """Delete an event."""
     if not await result_service.delete_result(db, Event, profile_id, item_id):
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}
 
 
-@router.delete("/profiles/{profile_id}/results/groups/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/groups/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def delete_group(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
+    """Delete a group."""
     if not await result_service.delete_result(db, Group, profile_id, item_id):
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}
 
 
-@router.delete("/profiles/{profile_id}/results/trends/{item_id}")
+@router.delete(
+    "/profiles/{profile_id}/results/trends/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
 async def delete_trend(
     profile_id: str,
     item_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
+    """Delete a trend."""
     if not await result_service.delete_result(db, Trend, profile_id, item_id):
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail=_ITEM_NOT_FOUND)
     return {"detail": "Deleted"}

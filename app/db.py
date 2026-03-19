@@ -10,9 +10,12 @@ async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_o
 
 
 class Base(DeclarativeBase):
+    """SQLAlchemy declarative base for all ORM models."""
+
     pass
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Yield an async database session for dependency injection."""
     async with async_session_factory() as session:
         yield session

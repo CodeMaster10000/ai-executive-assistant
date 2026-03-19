@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class EventRead(BaseModel):
+    """Read-only representation of an industry event returned by the API."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

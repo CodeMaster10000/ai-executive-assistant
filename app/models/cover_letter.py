@@ -8,6 +8,8 @@ from app.db import Base
 
 
 class CoverLetter(Base):
+    """Generated cover letter tied to a profile and optionally a job opportunity."""
+
     __tablename__ = "cover_letters"
 
     id: Mapped[str] = mapped_column(

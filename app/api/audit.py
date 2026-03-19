@@ -20,10 +20,14 @@ router = APIRouter(tags=["audit"])
 
 
 class ReplayRequest(BaseModel):
+    """Request body for replaying a run."""
+
     mode: Literal["strict", "refresh"]
 
 
 class ReplayResponse(BaseModel):
+    """Response body containing replay results and drift information."""
+
     run_id: str
     replay_mode: str
     original_run_id: str
@@ -33,6 +37,8 @@ class ReplayResponse(BaseModel):
 
 
 class DiffResponse(BaseModel):
+    """Response body containing a structured diff between two runs."""
+
     run_a: str
     run_b: str
     additions: list

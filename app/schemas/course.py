@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class CourseRead(BaseModel):
+    """Read-only representation of a course opportunity returned by the API."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
