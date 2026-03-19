@@ -42,12 +42,14 @@ class AgentFactory:
         search_tool: Any | None = None,
         policy_engine: Any | None = None,
         agent_models: AgentModelConfig | None = None,
+        freshness_filter: Any | None = None,
     ):
         self._llm = llm
         self._prompt_loader = prompt_loader
         self._search_tool = search_tool
         self._policy_engine = policy_engine
         self._agent_models = agent_models or AgentModelConfig()
+        self._freshness_filter = freshness_filter
 
         # Singleton agent instances
         self._goal_extractor: GoalExtractorAgent | None = None
@@ -106,6 +108,7 @@ class AgentFactory:
                 llm=self._get_llm(self._agent_models.web_scraper),
                 prompt_loader=self._prompt_loader,
                 search_tool=self._search_tool,
+                freshness_filter=self._freshness_filter,
             )
         return self._web_scraper
 

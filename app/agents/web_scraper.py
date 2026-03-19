@@ -27,9 +27,11 @@ class WebScraperAgent(LLMAgent):
         llm: Any | None = None,
         prompt_loader: Any | None = None,
         search_tool: Any | None = None,
+        freshness_filter: Any | None = None,
     ):
         super().__init__(llm=llm, prompt_loader=prompt_loader)
         self._search_tool = search_tool
+        self._freshness_filter = freshness_filter
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
         prompt = state.get("search_prompt", "")
@@ -82,6 +84,17 @@ class WebScraperAgent(LLMAgent):
                 WebScraperOutput, system_prompt, structured_input
             )
             results = [r.model_dump() for r in result.results]
+
+            if self._freshness_filter is not None:
+                results, removed = self._freshness_filter.filter_results(
+                    results, category
+                )
+                if removed:
+                    logger.debug(
+                        "Freshness filter removed %d result(s) for %s",
+                        len(removed), category,
+                    )
+
             return {result_key: results}
 
         except Exception as exc:

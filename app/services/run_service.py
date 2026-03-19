@@ -57,6 +57,19 @@ def run_to_read(run: Run) -> RunRead:
     )
 
 
+def _load_freshness_config() -> dict:
+    """Load freshness config from policy/sources.yaml."""
+    from app.engine.policy_engine import PolicyEngine
+
+    try:
+        pe = PolicyEngine(settings.policy_dir)
+        sources = pe.get_policy("sources")
+        return sources.get("scouts", {}).get("web_scrapers", {}).get("freshness", {})
+    except Exception:
+        logger.debug("No freshness config in sources.yaml, using defaults")
+        return {}
+
+
 def get_agent_factory() -> Any:
     """Return a shared AgentFactory singleton, created on the first call."""
     global _agent_factory
@@ -74,6 +87,8 @@ def get_agent_factory() -> Any:
         cover_letter=settings.cover_letter_model,
     )
 
+    freshness_config = _load_freshness_config()
+
     if not settings.llm_enabled or not settings.api_key:
         _agent_factory = AgentFactory(
             prompt_loader=prompt_loader,
@@ -81,15 +96,20 @@ def get_agent_factory() -> Any:
         )
         return _agent_factory
 
+    from app.engine.freshness_filter import FreshnessFilter
+
+    freshness_filter = FreshnessFilter(freshness_config)
+
     llm = ChatOpenAI(
         model=settings.llm_model,
         temperature=settings.llm_temperature,
         api_key=settings.api_key,
     )
 
+    timelimit = freshness_config.get("default_timelimit", "m")
     search_tool = None
     try:
-        search_tool = SafeDuckDuckGoSearchTool()
+        search_tool = SafeDuckDuckGoSearchTool(timelimit=timelimit)
     except ImportError:
         logger.warning("duckduckgo-search not installed, web scraper will use mock mode")
 
@@ -98,6 +118,7 @@ def get_agent_factory() -> Any:
         prompt_loader=prompt_loader,
         search_tool=search_tool,
         agent_models=agent_models,
+        freshness_filter=freshness_filter,
     )
     return _agent_factory
 
@@ -150,7 +171,14 @@ def _parse_profile_constraints(profile: UserProfile | None) -> list[str]:
     return [c.strip() for c in raw.split(",") if c.strip()]
 
 
-def _build_graph(mode: str, policy_engine: Any, audit_writer: Any, agent_factory: Any) -> Any:
+def _build_graph(
+    mode: str,
+    policy_engine: Any,
+    audit_writer: Any,
+    agent_factory: Any,
+    verifier: Any = None,
+    run_event_manager: Any = None,
+) -> Any:
     """Build the appropriate LangGraph StateGraph for the given run mode."""
     builders = {
         "weekly": build_weekly_graph,
@@ -161,6 +189,8 @@ def _build_graph(mode: str, policy_engine: Any, audit_writer: Any, agent_factory
         policy_engine=policy_engine,
         audit_writer=audit_writer,
         agent_factory=agent_factory,
+        verifier=verifier,
+        event_manager=run_event_manager,
     )
 
 
@@ -320,8 +350,14 @@ async def execute_run(run_id: str, profile_id: str, mode: str) -> None:
             ),
         )
 
+        from app.engine.verifier import Verifier
+        verifier = Verifier(policy_engine=policy_engine)
+
         agent_factory = get_agent_factory()
-        graph = _build_graph(mode, policy_engine, audit_writer, agent_factory)
+        graph = _build_graph(
+            mode, policy_engine, audit_writer, agent_factory,
+            verifier=verifier, run_event_manager=event_manager,
+        )
         compiled = graph.compile()
 
         initial_state = {
@@ -350,14 +386,24 @@ async def execute_run(run_id: str, profile_id: str, mode: str) -> None:
         if errors:
             logger.warning("Run %s had errors: %s", run_id, errors)
 
+        # Derive verifier status from accumulated results
+        verifier_results = result.get("verifier_results", [])
+        verifier_status = "pass"
+        if any(vr.get("status") == "fail" for vr in verifier_results):
+            verifier_status = "fail"
+        elif any(vr.get("status") == "partial" for vr in verifier_results):
+            verifier_status = "partial"
+
         await _update_run_status(
             run_id, "completed",
             audit_path=str(settings.artifacts_dir / "runs" / run_id),
+            verifier_status=verifier_status,
         )
         await event_manager.publish(run_id, {
             "type": "run_finished",
             "run_id": run_id,
             "status": "completed",
+            "verifier_status": verifier_status,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
