@@ -8,6 +8,7 @@ import RunDetailPage from "@/pages/RunDetailPage"
 import ResultsPage from "@/pages/OpportunitiesPage"
 import CoverLettersPage from "@/pages/CoverLettersPage"
 import PoliciesPage from "@/pages/PoliciesPage"
+import GuidePage from "@/pages/GuidePage"
 import NotFoundPage from "@/pages/NotFoundPage"
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/profiles/:profileId/results" element={<ResultsPage />} />
             <Route path="/profiles/:profileId/cover-letters" element={<CoverLettersPage />} />
             <Route path="/policies" element={<PoliciesPage />} />
+            <Route path="/guide" element={<GuidePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

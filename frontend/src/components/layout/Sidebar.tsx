@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
-import { LayoutDashboard, Shield, Moon, Sun, type LucideIcon } from "lucide-react"
+import { LayoutDashboard, Shield, BookOpen, Moon, Sun, type LucideIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { ProfileSwitcher } from "./ProfileSwitcher"
@@ -15,6 +15,7 @@ interface NavItem {
 const globalNav: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
   { label: "Policies", to: "/policies", icon: Shield },
+  { label: "Guide", to: "/guide", icon: BookOpen },
 ]
 
 function SidebarLink({ item }: { item: NavItem }) {
