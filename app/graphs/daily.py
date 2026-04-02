@@ -9,6 +9,7 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.factory import AgentFactory
 from app.engine.audit_writer import AuditEvent, AuditWriter
+from app.engine.link_validator import LinkValidator
 from app.engine.policy_engine import PolicyEngine
 from app.engine.verifier import Verifier
 from app.graphs.log import make_fan_out_node, make_node, node_end, node_start, route, warn
@@ -107,6 +108,24 @@ def _make_audit_node(
 
 
 # ------------------------------------------------------------------
+# Link validation node (post-scraper, pre-routing)
+# ------------------------------------------------------------------
+
+
+def _make_link_validator_node(link_validator: LinkValidator | None = None):
+    async def link_validator_node(state: DailyState) -> dict[str, Any]:
+        if link_validator is None:
+            return {}
+        raw_jobs = list(state.get("raw_job_results", []))
+        kept, removed = await link_validator.validate_results(raw_jobs, "job")
+        if removed:
+            return {"raw_job_results": kept}
+        return {}
+
+    return link_validator_node
+
+
+# ------------------------------------------------------------------
 # Conditional routing
 # ------------------------------------------------------------------
 
@@ -154,6 +173,7 @@ def build_daily_graph(
     agent_factory: AgentFactory | None = None,
     verifier: Verifier | None = None,
     event_manager: Any | None = None,
+    link_validator: LinkValidator | None = None,
 ) -> StateGraph:
     """Construct the daily pipeline StateGraph."""
     if agent_factory is None:
@@ -178,13 +198,15 @@ def build_daily_graph(
         _P, "data_formatter", data_formatter, "llm_structured_output",
         policy_engine, audit_writer, verifier, event_manager,
     ))
+    graph.add_node("link_validator", _make_link_validator_node(link_validator))
     graph.add_node("audit_writer", _make_audit_node(audit_writer, policy_engine, verifier))
     graph.add_node("safe_degrade", _safe_degrade_node)
 
     graph.set_entry_point("goal_extractor")
     graph.add_edge("goal_extractor", "web_scrapers")
+    graph.add_edge("web_scrapers", "link_validator")
     graph.add_conditional_edges(
-        "web_scrapers",
+        "link_validator",
         _check_scraper_results,
         {"format": "data_formatter", "safe_degrade": "safe_degrade"},
     )

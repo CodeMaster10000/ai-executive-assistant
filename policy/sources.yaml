@@ -16,3 +16,28 @@ scouts:
         - "applications? closed"
         - "no longer available"
         - "job has been removed"
+    link_validation:
+      enabled: true
+      request_timeout_seconds: 5
+      batch_timeout_seconds: 30
+      max_concurrency: 10
+      dead_status_codes: [404, 410]
+      redirect_homepage_patterns:
+        - "^/$"
+        - "^/jobs/?$"
+        - "^/careers/?$"
+        - "^/search"
+      expired_body_patterns:
+        - "no longer accepting applications"
+        - "this job has expired"
+        - "this listing has expired"
+        - "position has been filled"
+        - "this job is no longer available"
+        - "posting has closed"
+        - "applications? closed"
+        - "no longer available"
+        - "job has been removed"
+        - "page not found"
+        - "Job expired"
+        - "This job has expired"
+      max_body_read_bytes: 65536
