@@ -27,11 +27,9 @@ class WebScraperAgent(LLMAgent):
         llm: Any | None = None,
         prompt_loader: Any | None = None,
         search_tool: Any | None = None,
-        freshness_filter: Any | None = None,
     ):
         super().__init__(llm=llm, prompt_loader=prompt_loader)
         self._search_tool = search_tool
-        self._freshness_filter = freshness_filter
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
         """Execute a web search for the given category and return raw results."""
@@ -44,7 +42,12 @@ class WebScraperAgent(LLMAgent):
 
         try:
             today = date.today().isoformat()
-            system_prompt = self._get_system_prompt(today=today)
+            prompt_name = f"web_scraper/{category}" if category else "web_scraper/job"
+            system_prompt = (
+                self._prompt_loader.load(prompt_name, today=today)
+                if self._prompt_loader
+                else f"You are a helpful web search agent."
+            )
             user_content = f"Search for: {prompt}"
 
             search_context = ""
@@ -74,8 +77,7 @@ class WebScraperAgent(LLMAgent):
 
                 search_context = response.content or ""
 
-            # Parse the final response as structured output,
-            # including actual search results as context
+            # Parse the final response as structured output
             structured_input = (
                 f"Search for: {prompt}\n\nSearch results found:\n{search_context}"
                 if search_context
@@ -85,17 +87,6 @@ class WebScraperAgent(LLMAgent):
                 WebScraperOutput, system_prompt, structured_input
             )
             results = [r.model_dump() for r in result.results]
-
-            if self._freshness_filter is not None:
-                results, removed = self._freshness_filter.filter_results(
-                    results, category
-                )
-                if removed:
-                    logger.debug(
-                        "Freshness filter removed %d result(s) for %s",
-                        len(removed), category,
-                    )
-
             return {result_key: results}
 
         except Exception as exc:

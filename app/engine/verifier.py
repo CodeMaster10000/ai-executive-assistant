@@ -13,8 +13,19 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from app.engine.freshness_filter import DEFAULT_EXPIRY_PATTERNS
 from app.engine.policy_engine import PolicyEngine
+
+_EXPIRY_PATTERNS = [
+    r"no longer accepting applications",
+    r"this job has expired",
+    r"this listing has expired",
+    r"position has been filled",
+    r"this job is no longer available",
+    r"posting has closed",
+    r"applications? closed",
+    r"no longer available",
+    r"job has been removed",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +108,7 @@ class Verifier:
         global_cfg = policy_engine.get_global_config() if policy_engine else {}
         self._max_output_items: int = global_cfg.get("max_output_items", 50)
         self._expiry_patterns = [
-            re.compile(p, re.IGNORECASE) for p in DEFAULT_EXPIRY_PATTERNS
+            re.compile(p, re.IGNORECASE) for p in _EXPIRY_PATTERNS
         ]
 
     # ------------------------------------------------------------------
@@ -402,7 +413,6 @@ class Verifier:
             text = " ".join([
                 item.get("title", ""),
                 item.get("snippet", ""),
-                item.get("body", ""),
             ])
             if any(p.search(text) for p in self._expiry_patterns):
                 flagged.append(i)
