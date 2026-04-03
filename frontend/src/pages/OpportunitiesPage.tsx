@@ -562,7 +562,7 @@ function ResultCard({
         </CardHeader>
         <CardContent>
           {subtitle && <p className="text-xs text-muted-foreground mb-2">{subtitle}</p>}
-          {description && <p className="text-sm line-clamp-3">{description}</p>}
+          {description && <p className="text-sm line-clamp-2">{description}</p>}
           {badges.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {badges.map((b) => (
