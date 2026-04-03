@@ -21,6 +21,17 @@ const AGENTS_BY_MODE: Record<string, string[]> = {
   cover_letter: ["cover_letter_agent", "audit_writer"],
 }
 
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  goal_extractor: "Goal Extractor",
+  web_scrapers: "Web Scraper",
+  url_validator: "Content Validator",
+  data_formatter: "Data Formatter",
+  audit_writer: "Audit Writer",
+  ceo: "CEO",
+  cfo: "CFO",
+  cover_letter_agent: "Cover Letter",
+}
+
 type AgentStatus = "idle" | "running" | "complete" | "partial" | "failed"
 
 function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, AgentStatus> {
@@ -279,7 +290,7 @@ function PipelineStepper({ agents, statuses }: { agents: string[]; statuses: Rec
           <div className="flex flex-col items-center" style={{ minWidth: "5rem" }}>
             {stepCircle(statuses[name])}
             <span className="mt-2 text-xs text-muted-foreground text-center leading-tight">
-              {name.replace(/_/g, " ")}
+              {AGENT_DISPLAY_NAMES[name] ?? name.replace(/_/g, " ")}
             </span>
           </div>
           {i < agents.length - 1 && (
@@ -332,11 +343,11 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
                 className="flex items-center gap-1 text-sm font-medium hover:underline cursor-pointer"
               >
                 <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`} />
-                {e.agent}, <span className="font-normal text-muted-foreground">{e.event_type}</span>
+                {AGENT_DISPLAY_NAMES[e.agent] ?? e.agent}, <span className="font-normal text-muted-foreground">{e.event_type}</span>
               </button>
             ) : (
               <p className="text-sm font-medium">
-                {e.agent}, <span className="font-normal text-muted-foreground">{e.event_type}</span>
+                {AGENT_DISPLAY_NAMES[e.agent] ?? e.agent}, <span className="font-normal text-muted-foreground">{e.event_type}</span>
               </p>
             )}
             {hasData && isOpen && (
