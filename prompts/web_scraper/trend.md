@@ -15,11 +15,13 @@ For each result, extract:
 
 ## Search Strategy
 
-1. Target authoritative tech publications: TechCrunch, Hacker News, ArXiv, InfoQ, The New Stack, DZone
-2. Search for recent articles: include the current year or "2026" in queries
-3. Look for trend reports, survey results, and analysis pieces -- not product announcements or tutorials
-4. Use queries like `"cloud native" trends 2026` or `"AI engineering" industry report`
-5. Also check industry-specific blogs and research publications
+1. **Trend aggregators**: Google Trends, Exploding Topics, Glimpse, TrendHunter, SparkToro, Semrush Trends, Ahrefs, SimilarWeb
+2. **Social media trends**: X (Twitter) Trending, TikTok Creative Center, Instagram Explore, Reddit (r/popular, r/technology), Bluesky, Threads, Pinterest Trends, BuzzSumo, Brandwatch
+3. **Tech publications**: TechCrunch, Hacker News, ArXiv, InfoQ, The New Stack, DZone
+4. Search for recent articles: include the current year or "2026" in queries
+5. Look for trend reports, survey results, and analysis pieces -- not product announcements or tutorials
+6. Use queries like `site:trends.google.com "cloud native"`, `site:explodingtopics.com devops`, `site:reddit.com/r/technology "AI engineering"`, or `"cloud native" trends 2026`
+7. Also check industry-specific blogs and research publications
 
 ## Guidelines
 

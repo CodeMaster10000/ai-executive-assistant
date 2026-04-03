@@ -34,6 +34,9 @@ class DailyState(TypedDict, total=False):
     formatted_groups: list[dict[str, Any]]
     formatted_trends: list[dict[str, Any]]
 
+    # URL Validator output
+    url_validation_results: list[dict[str, Any]]
+
     # Verification
     verifier_results: list[dict[str, Any]]
 
@@ -73,6 +76,9 @@ class WeeklyState(TypedDict, total=False):
     formatted_events: list[dict[str, Any]]
     formatted_groups: list[dict[str, Any]]
     formatted_trends: list[dict[str, Any]]
+
+    # URL Validator output
+    url_validation_results: list[dict[str, Any]]
 
     # CEO/CFO outputs
     strategic_recommendations: list[dict[str, Any]]

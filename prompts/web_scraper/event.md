@@ -32,6 +32,6 @@ For each result, extract:
 
 - **Extract specific URLs**: Always use the direct event page URL, not a generic platform homepage.
 - **Follow the directive literally**: Search for exactly the topics and technologies mentioned.
-- Only include events that have not yet occurred
+- **CRITICAL**: Only include events with dates AFTER {today}. If an event's date is before {today}, skip it entirely. If the event date is unclear or not stated, skip it.
 - Deduplicate results with the same URL
 - Include only results that are directly relevant to the directive

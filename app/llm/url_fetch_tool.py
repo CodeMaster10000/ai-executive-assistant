@@ -6,12 +6,13 @@ import asyncio
 import logging
 
 import httpx
+from bs4 import BeautifulSoup
 from langchain_core.tools import BaseTool
 
 logger = logging.getLogger(__name__)
 
 _FETCH_TIMEOUT = 8
-_MAX_BODY_CHARS = 3000
+_MAX_BODY_CHARS = 40000
 _BROWSER_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -38,7 +39,12 @@ class URLFetchTool(BaseTool):
             with httpx.Client(timeout=_FETCH_TIMEOUT, headers=_BROWSER_HEADERS) as client:
                 resp = client.get(url.strip(), follow_redirects=True)
                 status = resp.status_code
-                body = resp.text[:_MAX_BODY_CHARS]
+                soup = BeautifulSoup(resp.text, "html.parser")
+                for tag in soup(["script", "style"]):
+                    tag.decompose()
+                text = soup.get_text(separator="\n", strip=True)
+                lines = [line for line in text.splitlines() if line.strip()]
+                body = "\n".join(lines)[:_MAX_BODY_CHARS]
                 return f"HTTP {status}\n\n{body}"
         except Exception as exc:
             return f"Fetch error: {exc}"
