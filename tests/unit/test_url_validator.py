@@ -33,11 +33,13 @@ class TestDeterministicPrepass:
         agent = _agent(return_value=_valid_body(
             "This position is closed. No longer accepting applications. "
         ))
-        state = _make_state("job", ["https://example.com/job1"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/111"])
         result = await agent(state)
 
         assert result["raw_job_results"] == []
-        assert result["url_validation_results"] == []
+        assert len(result["url_validation_results"]) == 1
+        assert result["url_validation_results"][0]["valid"] is False
+        assert result["url_validation_results"][0]["reason"] != ""
 
     @pytest.mark.asyncio
     async def test_catches_ended_event(self):
@@ -60,19 +62,18 @@ class TestDeterministicPrepass:
     @pytest.mark.asyncio
     async def test_passes_valid_job(self):
         agent = _agent(return_value=_valid_body(
-            "Senior Python Developer - Apply Now! We are hiring. "
+            "use ai to assess how you fit. Senior Python Developer - Apply Now! "
         ))
-        state = _make_state("job", ["https://example.com/job1"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/222"])
         result = await agent(state)
 
         assert "raw_job_results" not in result
-        assert len(result["url_validation_results"]) == 1
-        assert result["url_validation_results"][0]["valid"] is True
+        assert result["url_validation_results"] == []
 
     @pytest.mark.asyncio
     async def test_catches_404(self):
         agent = _agent(return_value="HTTP 404\n\nPage not found")
-        state = _make_state("job", ["https://example.com/gone"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/333"])
         result = await agent(state)
 
         assert result["raw_job_results"] == []
@@ -88,7 +89,7 @@ class TestDeterministicPrepass:
     @pytest.mark.asyncio
     async def test_catches_exception_in_gather(self):
         agent = _agent(side_effect=RuntimeError("network down"))
-        state = _make_state("job", ["https://example.com/err"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/444"])
         result = await agent(state)
 
         assert result["raw_job_results"] == []
@@ -96,7 +97,7 @@ class TestDeterministicPrepass:
     @pytest.mark.asyncio
     async def test_catches_short_content(self):
         agent = _agent(return_value="HTTP 200\n\nShort page.")
-        state = _make_state("job", ["https://example.com/short"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/555"])
         result = await agent(state)
 
         assert result["raw_job_results"] == []
@@ -104,7 +105,7 @@ class TestDeterministicPrepass:
     @pytest.mark.asyncio
     async def test_case_insensitive_matching(self):
         agent = _agent(return_value=_valid_body("NO LONGER ACCEPTING APPLICATIONS "))
-        state = _make_state("job", ["https://example.com/job"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/666"])
         result = await agent(state)
 
         assert result["raw_job_results"] == []
@@ -112,21 +113,22 @@ class TestDeterministicPrepass:
     @pytest.mark.asyncio
     async def test_filters_only_invalid_urls(self):
         async def fetch_side_effect(url):
-            if "expired" in url:
+            if "777" in url:
                 return _valid_body("This job has expired. ")
-            return _valid_body("Great opportunity! Apply now. ")
+            return _valid_body("use ai to assess how you fit. Great opportunity! ")
 
         agent = _agent(side_effect=fetch_side_effect)
         state = _make_state("job", [
-            "https://example.com/expired-job",
-            "https://example.com/good-job",
+            "https://www.linkedin.com/jobs/view/777",
+            "https://www.linkedin.com/jobs/view/888",
         ])
         result = await agent(state)
 
         assert len(result["raw_job_results"]) == 1
-        assert result["raw_job_results"][0]["url"] == "https://example.com/good-job"
+        assert result["raw_job_results"][0]["url"] == "https://www.linkedin.com/jobs/view/888"
         assert len(result["url_validation_results"]) == 1
-        assert result["url_validation_results"][0]["valid"] is True
+        assert result["url_validation_results"][0]["valid"] is False
+        assert result["url_validation_results"][0]["reason"] != ""
 
     @pytest.mark.asyncio
     async def test_empty_state_returns_empty(self):
@@ -142,37 +144,36 @@ class TestDeterministicPrepass:
         result = await agent(state)
 
         assert "raw_trend_results" not in result
-        assert result["url_validation_results"][0]["valid"] is True
+        assert result["url_validation_results"] == []
 
     @pytest.mark.asyncio
     async def test_no_fetch_tool_returns_empty(self):
         agent = URLValidatorAgent()
-        state = _make_state("job", ["https://example.com/job1"])
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/999"])
         result = await agent(state)
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_linkedin_generic_page_flagged_invalid(self):
-        """LinkedIn page without actual-page markers is flagged as generic."""
-        body = _valid_body("Senior Dev at BigCo. report this job. about the role. ")
+    async def test_linkedin_slug_url_passes(self):
+        """LinkedIn URL with slug before numeric ID passes validation."""
+        body = _valid_body("Senior Dev at BigCo. Great role! Apply now. ")
         agent = _agent(return_value=body)
-        state = _make_state("job", ["https://linkedin.com/jobs/view/12345"])
-        result = await agent(state)
-
-        assert result["raw_job_results"] == []
-        assert result["url_validation_results"] == []
-
-    @pytest.mark.asyncio
-    async def test_linkedin_actual_page_passes(self):
-        """LinkedIn page with actual-page markers passes validation."""
-        body = _valid_body(
-            "Senior Dev at BigCo. use ai to assess how you fit. "
-            "sign in to evaluate your skills. Great role! "
-        )
-        agent = _agent(return_value=body)
-        state = _make_state("job", ["https://linkedin.com/jobs/view/12345"])
+        state = _make_state("job", [
+            "https://www.linkedin.com/jobs/view/senior-dev-at-bigco-4390698710",
+        ])
         result = await agent(state)
 
         assert "raw_job_results" not in result
+        assert result["url_validation_results"] == []
+
+    @pytest.mark.asyncio
+    async def test_invalid_results_include_reason(self):
+        """Invalid URLs appear in url_validation_results with reason."""
+        agent = _agent(return_value="HTTP 404\n\nPage not found")
+        state = _make_state("job", ["https://www.linkedin.com/jobs/view/12345"])
+        result = await agent(state)
+
+        assert result["raw_job_results"] == []
         assert len(result["url_validation_results"]) == 1
-        assert result["url_validation_results"][0]["valid"] is True
+        assert result["url_validation_results"][0]["valid"] is False
+        assert "404" in result["url_validation_results"][0]["reason"]

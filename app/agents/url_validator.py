@@ -105,19 +105,28 @@ class URLValidatorAgent:
         tasks = [fetch_tool.ainvoke(item.get("url", "")) for _, _, item in all_items]
         fetched = await asyncio.gather(*tasks, return_exceptions=True)
 
-        results: list[URLValidationItem] = []
+        invalid_results: list[URLValidationItem] = []
         valid_by_key: dict[str, list[dict[str, Any]]] = {}
         for (category, key, item), raw in zip(all_items, fetched):
             url = item.get("url", "")
             result: URLValidationItem = _check_content(url, category, raw)
             if result.valid:
-                results.append(result)
                 valid_by_key.setdefault(key, []).append(item)
             else:
                 logger.info("URL validator flagged %s as invalid: %s", url, result.reason)
+                invalid_results.append(result)
+
+        # Include web scraper filtered URLs in the validation results
+        for category, _ in _CATEGORIES:
+            for f in state.get(f"filtered_{category}_urls", []):
+                invalid_results.append(URLValidationItem(
+                    url=f.get("url", ""),
+                    valid=False,
+                    reason=f.get("reason", "filtered by web scraper"),
+                ))
 
         updates: dict[str, Any] = {
-            "url_validation_results": [r.model_dump() for r in results],
+            "url_validation_results": [r.model_dump() for r in invalid_results],
         }
         for _, key in _CATEGORIES:
             original = state.get(key, [])
@@ -141,11 +150,13 @@ def _check_content(url: str, category: str, raw: Any) -> URLValidationItem:
     # Parse HTTP status
     status, body = extract_http_body_and_status(text)
 
-    if status == 404:
-        return URLValidationItem(url=url, valid=False, reason=f"HTTP 404 - page not found - {url}")
+    if status == 404 or status == 400:
+        return URLValidationItem(url=url, valid=False, reason=f"HTTP {status} - page unavailable - {url}")
 
     if status < 200 or status > 299:
-        return URLValidationItem(url=url, valid=False, reason=f"HTTP {status} - unknown error - {url}")
+        # Groups often return 403 (login walls, private pages) but are still valid
+        if not (category in ("group", "cert") and status == 403):
+            return URLValidationItem(url=url, valid=False, reason=f"HTTP {status} - unknown error - {url}")
 
     if len(body) < _MIN_BODY_CHARS and (category == "job" or category == "event"):
         return URLValidationItem(url=url, valid=False, reason=f"insufficient content - {url}")
@@ -156,12 +167,12 @@ def _check_content(url: str, category: str, raw: Any) -> URLValidationItem:
             return URLValidationItem(url=url, valid=False, reason=phrase)
 
     # LinkedIn-specific: detect generic pages that lack actual job page markers
-    if category == "job" and "linkedin.com" in url.lower():
-        if not any(marker in body_lower for marker in _LINKEDIN_ACTUAL_PAGE_MARKERS):
-            return URLValidationItem(
-                url=url, valid=False,
-                reason="generic linkedin page - unable to verify job status",
-            )
+    # if category == "job" and "linkedin.com" in url.lower():
+    #     if not any(marker in body_lower for marker in _LINKEDIN_ACTUAL_PAGE_MARKERS):
+    #         return URLValidationItem(
+    #             url=url, valid=False,
+    #             reason="generic linkedin page - unable to verify job status",
+    #         )
 
     return URLValidationItem(url=url, valid=True)
 
