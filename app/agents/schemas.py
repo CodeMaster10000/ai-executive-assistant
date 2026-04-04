@@ -42,10 +42,18 @@ class WebScraperResult(BaseModel):
     source: str = Field(default="", description="Source website or domain")
 
 
+class FilteredURL(BaseModel):
+    """A URL that was checked and discarded during web scraping."""
+
+    url: str = Field(description="The URL that was checked and discarded")
+    reason: str = Field(description="Why the URL was discarded")
+
+
 class WebScraperOutput(BaseModel):
     """Structured output from the WebScraper agent containing a list of search results."""
 
     results: list[WebScraperResult] = Field(default_factory=list)
+    filtered_urls: list[FilteredURL] = Field(default_factory=list)
 
 
 # -- DataFormatter sub-models --

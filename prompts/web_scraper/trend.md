@@ -23,6 +23,10 @@ For each result, extract:
 6. Use queries like `site:trends.google.com "cloud native"`, `site:explodingtopics.com devops`, `site:reddit.com/r/technology "AI engineering"`, or `"cloud native" trends 2026`
 7. Also check industry-specific blogs and research publications
 
+## URL Validation
+
+After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and contains substantive content. Drop any URL that returns an error or leads to a paywall with no usable content. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
+
 ## Guidelines
 
 - **Extract specific URLs**: Always use the direct article URL, not a publication homepage.

@@ -22,6 +22,10 @@ For each result, extract:
 3. Prefer pages that show pricing, duration, and enrollment info over blog posts or review articles
 4. Use specific certification names in queries when possible (e.g., `"AWS Solutions Architect" certification`)
 
+## URL Validation
+
+After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and the certification or course is still available. Drop any URL that returns a 404 or leads to a retired/unavailable program. **HTTP 403 is acceptable** -- many course platforms (Udemy, Coursera, etc.) block automated fetches with 403 anti-bot protection. Keep 403 URLs as valid results. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
+
 ## Guidelines
 
 - **Extract specific URLs**: Always use the direct certification or course page URL, not a generic catalog page.

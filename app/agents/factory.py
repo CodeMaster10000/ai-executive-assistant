@@ -97,10 +97,13 @@ class AgentFactory:
     def create_web_scraper(self) -> AgentProtocol:
         """Return the singleton WebScraperAgent, creating it on first call."""
         if self._web_scraper is None:
+            from app.llm.url_fetch_tool import URLFetchTool
+
             self._web_scraper = WebScraperAgent(
                 llm=self._get_llm(self._agent_models.web_scraper),
                 prompt_loader=self._prompt_loader,
                 search_tool=self._search_tool,
+                fetch_tool=URLFetchTool(),
             )
         return self._web_scraper
 

@@ -28,6 +28,10 @@ For each result, extract:
 4. Use queries like `"Python conference 2026"` or `site:meetup.com "software engineering" 2026`
 5. Prefer events with clear dates and registration links
 
+## URL Validation
+
+After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and the event is still upcoming. Drop any URL that returns an error or shows a past/cancelled event. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
+
 ## Guidelines
 
 - **Extract specific URLs**: Always use the direct event page URL, not a generic platform homepage.

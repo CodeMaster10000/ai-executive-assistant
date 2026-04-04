@@ -21,6 +21,10 @@ For each result, extract:
 4. Prefer communities with active discussions and substantial membership
 5. Also look for GitHub Discussions, Stack Overflow communities, and dev.to groups
 
+## URL Validation
+
+After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and the community is still active. Drop any URL that returns a 404 or leads to an archived/deleted group. **HTTP 403 is acceptable** -- many community platforms (LinkedIn groups, private Discord servers, etc.) return 403 due to login walls. Keep 403 URLs as valid results. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
+
 ## Guidelines
 
 - **Extract specific URLs**: Always use the direct community/group page URL, not a platform homepage.
