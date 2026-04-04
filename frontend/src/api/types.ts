@@ -5,6 +5,16 @@ export interface ProfileCreate {
   targets?: string[] | null
   constraints?: string[] | null
   skills?: string[] | null
+  preferred_titles?: string[] | null
+  experience_level?: string | null
+  industries?: string[] | null
+  locations?: string[] | null
+  work_arrangement?: string | null
+  event_attendance?: string | null
+  target_certifications?: string[] | null
+  learning_budget?: string | null
+  learning_format?: string | null
+  time_commitment?: string | null
 }
 
 export interface ProfileUpdate {
@@ -12,6 +22,16 @@ export interface ProfileUpdate {
   targets?: string[] | null
   constraints?: string[] | null
   skills?: string[] | null
+  preferred_titles?: string[] | null
+  experience_level?: string | null
+  industries?: string[] | null
+  locations?: string[] | null
+  work_arrangement?: string | null
+  event_attendance?: string | null
+  target_certifications?: string[] | null
+  learning_budget?: string | null
+  learning_format?: string | null
+  time_commitment?: string | null
 }
 
 export interface Profile {
@@ -21,6 +41,16 @@ export interface Profile {
   constraints: string[] | null
   skills: string[] | null
   cv_path: string | null
+  preferred_titles: string[] | null
+  experience_level: string | null
+  industries: string[] | null
+  locations: string[] | null
+  work_arrangement: string | null
+  event_attendance: string | null
+  target_certifications: string[] | null
+  learning_budget: string | null
+  learning_format: string | null
+  time_commitment: string | null
   created_at: string
   updated_at: string
 }

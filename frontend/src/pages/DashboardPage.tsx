@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Users, Play, Plus, LayoutDashboard, Upload } from "lucide-react"
-import { createProfile, importProfile } from "@/api/profiles"
+import { createProfile, importProfile, updateProfile } from "@/api/profiles"
 import { listAllRuns } from "@/api/runs"
 import type { Run } from "@/api/types"
 import { useProfiles } from "@/contexts/ProfileContext"
@@ -27,6 +27,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
@@ -37,6 +47,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newName, setNewName] = useState("")
+  const [importConflict, setImportConflict] = useState<{ existingId: string; data: Record<string, unknown> } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -61,6 +72,12 @@ export default function DashboardPage() {
     try {
       const text = await file.text()
       const data = JSON.parse(text)
+      const existing = profiles.find((p) => p.name === data.name)
+      if (existing) {
+        setImportConflict({ existingId: existing.id, data })
+        e.target.value = ""
+        return
+      }
       const created = await importProfile(data)
       await refreshProfiles()
       toast.success(`Profile "${created.name}" imported`)
@@ -69,6 +86,22 @@ export default function DashboardPage() {
       toast.error("Failed to import profile. Check the file format.")
     }
     e.target.value = ""
+  }
+
+  async function handleImportReplace() {
+    if (!importConflict) return
+    const { existingId, data } = importConflict
+    try {
+      const { name, ...rest } = data
+      await updateProfile(existingId, { name: name as string, ...rest })
+      await refreshProfiles()
+      toast.success(`Profile "${name}" replaced`)
+      setImportConflict(null)
+      navigate(`/profiles/${existingId}`)
+    } catch {
+      toast.error("Failed to replace profile.")
+      setImportConflict(null)
+    }
   }
 
   if (loading || profilesLoading) return <LoadingSpinner />
@@ -99,6 +132,11 @@ export default function DashboardPage() {
           name={newName}
           onNameChange={setNewName}
           onCreate={handleCreate}
+        />
+        <ImportConflictDialog
+          conflict={importConflict}
+          onCancel={() => setImportConflict(null)}
+          onReplace={handleImportReplace}
         />
       </div>
     )
@@ -218,6 +256,11 @@ export default function DashboardPage() {
           </Table>
         </Card>
       )}
+      <ImportConflictDialog
+        conflict={importConflict}
+        onCancel={() => setImportConflict(null)}
+        onReplace={handleImportReplace}
+      />
     </div>
   )
 }
@@ -280,5 +323,32 @@ function CreateProfileDialog({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function ImportConflictDialog({
+  conflict,
+  onCancel,
+  onReplace,
+}: {
+  conflict: { existingId: string; data: Record<string, unknown> } | null
+  onCancel: () => void
+  onReplace: () => void
+}) {
+  return (
+    <AlertDialog open={!!conflict} onOpenChange={(open) => !open && onCancel()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Profile already exists</AlertDialogTitle>
+          <AlertDialogDescription>
+            A profile named "{String(conflict?.data?.name ?? "")}" already exists. Do you want to replace it with the imported data?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onReplace}>Replace</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

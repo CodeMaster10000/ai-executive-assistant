@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { Save, Trash2, Upload, Download, X, Plus, Play, Briefcase, FileEdit, Sparkles } from "lucide-react"
-import { getProfile, updateProfile, deleteProfile, uploadCv, extractSkillsFromCv, exportProfile, createProfile } from "@/api/profiles"
+import { getProfile, updateProfile, deleteProfile, uploadCv, extractSkillsFromCv, exportProfile, importProfile } from "@/api/profiles"
 import type { Profile, ProfileUpdate } from "@/api/types"
 import { useProfiles } from "@/contexts/ProfileContext"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -24,10 +24,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 
+const EXPERIENCE_LEVELS = ["junior", "mid", "senior", "lead", "principal", "executive"]
+const WORK_ARRANGEMENTS = ["remote", "hybrid", "onsite", "flexible"]
+const EVENT_ATTENDANCES = ["local", "remote", "no preference"]
+const LEARNING_BUDGETS = ["free only", "under $100", "under $500", "under $1000", "under $2000", "no limit"]
+const LEARNING_FORMATS = ["online", "in-person", "self-paced", "instructor-led"]
+const TIME_COMMITMENTS = ["1-2 hrs/week", "3-5 hrs/week", "5-10 hrs/week", "10-20 hrs/week", "weekends only", "full-time"]
+
 export default function ProfilePage() {
   const { profileId } = useParams()
   const navigate = useNavigate()
-  const { refresh: refreshProfiles } = useProfiles()
+  const { profiles, refresh: refreshProfiles } = useProfiles()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -35,6 +42,19 @@ export default function ProfilePage() {
   const [targets, setTargets] = useState<string[]>([])
   const [constraints, setConstraints] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
+  // Career & Job
+  const [preferredTitles, setPreferredTitles] = useState<string[]>([])
+  const [experienceLevel, setExperienceLevel] = useState("")
+  const [industries, setIndustries] = useState<string[]>([])
+  const [locations, setLocations] = useState<string[]>([])
+  const [workArrangement, setWorkArrangement] = useState("")
+  const [eventAttendance, setEventAttendance] = useState("")
+  // Learning & Certification
+  const [targetCertifications, setTargetCertifications] = useState<string[]>([])
+  const [learningBudget, setLearningBudget] = useState("")
+  const [learningFormat, setLearningFormat] = useState("")
+  const [timeCommitment, setTimeCommitment] = useState("")
+  const [importConflict, setImportConflict] = useState<{ existingId: string; data: Record<string, unknown> } | null>(null)
 
   const draftKey = profileId ? `profile-draft-${profileId}` : null
 
@@ -51,6 +71,16 @@ export default function ProfilePage() {
             setTargets(draft.targets ?? p.targets ?? [])
             setConstraints(draft.constraints ?? p.constraints ?? [])
             setSkills(draft.skills ?? p.skills ?? [])
+            setPreferredTitles(draft.preferred_titles ?? p.preferred_titles ?? [])
+            setExperienceLevel(draft.experience_level ?? p.experience_level ?? "")
+            setIndustries(draft.industries ?? p.industries ?? [])
+            setLocations(draft.locations ?? p.locations ?? [])
+            setWorkArrangement(draft.work_arrangement ?? p.work_arrangement ?? "")
+            setEventAttendance(draft.event_attendance ?? p.event_attendance ?? "")
+            setTargetCertifications(draft.target_certifications ?? p.target_certifications ?? [])
+            setLearningBudget(draft.learning_budget ?? p.learning_budget ?? "")
+            setLearningFormat(draft.learning_format ?? p.learning_format ?? "")
+            setTimeCommitment(draft.time_commitment ?? p.time_commitment ?? "")
             return
           } catch { /* ignore corrupt draft */ }
         }
@@ -58,6 +88,16 @@ export default function ProfilePage() {
         setTargets(p.targets ?? [])
         setConstraints(p.constraints ?? [])
         setSkills(p.skills ?? [])
+        setPreferredTitles(p.preferred_titles ?? [])
+        setExperienceLevel(p.experience_level ?? "")
+        setIndustries(p.industries ?? [])
+        setLocations(p.locations ?? [])
+        setWorkArrangement(p.work_arrangement ?? "")
+        setEventAttendance(p.event_attendance ?? "")
+        setTargetCertifications(p.target_certifications ?? [])
+        setLearningBudget(p.learning_budget ?? "")
+        setLearningFormat(p.learning_format ?? "")
+        setTimeCommitment(p.time_commitment ?? "")
       })
       .finally(() => setLoading(false))
   }, [profileId, draftKey])
@@ -68,8 +108,20 @@ export default function ProfilePage() {
   const dirtyRef = useRef(false)
   useEffect(() => {
     if (!draftKey || !profile) return
-    const draft = { name, targets, constraints, skills }
-    const saved = { name: profile.name, targets: profile.targets ?? [], constraints: profile.constraints ?? [], skills: profile.skills ?? [] }
+    const draft = {
+      name, targets, constraints, skills,
+      preferred_titles: preferredTitles, experience_level: experienceLevel,
+      industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
+      target_certifications: targetCertifications, learning_budget: learningBudget,
+      learning_format: learningFormat, time_commitment: timeCommitment,
+    }
+    const saved = {
+      name: profile.name, targets: profile.targets ?? [], constraints: profile.constraints ?? [], skills: profile.skills ?? [],
+      preferred_titles: profile.preferred_titles ?? [], experience_level: profile.experience_level ?? "",
+      industries: profile.industries ?? [], locations: profile.locations ?? [], work_arrangement: profile.work_arrangement ?? "", event_attendance: profile.event_attendance ?? "",
+      target_certifications: profile.target_certifications ?? [], learning_budget: profile.learning_budget ?? "",
+      learning_format: profile.learning_format ?? "", time_commitment: profile.time_commitment ?? "",
+    }
     const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
     dirtyRef.current = dirty
     if (dirty) {
@@ -77,7 +129,7 @@ export default function ProfilePage() {
     } else {
       localStorage.removeItem(draftKey)
     }
-  }, [draftKey, name, targets, constraints, skills, profile])
+  }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, targetCertifications, learningBudget, learningFormat, timeCommitment, profile])
 
   // Warn on navigation away with unsaved changes
   useEffect(() => {
@@ -89,20 +141,34 @@ export default function ProfilePage() {
   }, [profileId])
 
   function canSave() {
-    return targets.length > 0 && skills.length > 0 && !!profile?.cv_path
+    return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitles.length > 0 && !!profile?.cv_path
   }
 
   async function handleSave() {
     if (!profileId) return
     if (!canSave()) {
       const missing: string[] = []
+      if (!name.trim()) missing.push("a name")
       if (targets.length === 0) missing.push("career goals")
       if (skills.length === 0) missing.push("skills")
+      if (preferredTitles.length === 0) missing.push("preferred job titles")
       if (!profile?.cv_path) missing.push("a CV")
       toast.error(`Please add ${missing.join(", ")} before saving`)
       return
     }
-    const data: ProfileUpdate = { name, targets, constraints, skills }
+    const data: ProfileUpdate = {
+      name, targets, constraints, skills,
+      preferred_titles: preferredTitles,
+      experience_level: experienceLevel || null,
+      industries: industries.length > 0 ? industries : null,
+      locations: locations.length > 0 ? locations : null,
+      work_arrangement: workArrangement || null,
+      event_attendance: eventAttendance || null,
+      target_certifications: targetCertifications.length > 0 ? targetCertifications : null,
+      learning_budget: learningBudget || null,
+      learning_format: learningFormat || null,
+      time_commitment: timeCommitment || null,
+    }
     const updated = await updateProfile(profileId, data)
     setProfile(updated)
     if (draftKey) localStorage.removeItem(draftKey)
@@ -162,7 +228,13 @@ export default function ProfilePage() {
     try {
       const text = await file.text()
       const data = JSON.parse(text)
-      const created = await createProfile(data)
+      const existing = profiles.find((p) => p.name === data.name)
+      if (existing) {
+        setImportConflict({ existingId: existing.id, data })
+        e.target.value = ""
+        return
+      }
+      const created = await importProfile(data)
       await refreshProfiles()
       toast.success(`Profile "${created.name}" imported`)
       navigate(`/profiles/${created.id}`)
@@ -170,6 +242,22 @@ export default function ProfilePage() {
       toast.error("Failed to import profile. Check the file format.")
     }
     e.target.value = ""
+  }
+
+  async function handleImportReplace() {
+    if (!importConflict) return
+    const { existingId, data } = importConflict
+    try {
+      const { name: importName, ...rest } = data
+      await updateProfile(existingId, { name: importName as string, ...rest })
+      await refreshProfiles()
+      toast.success(`Profile "${importName}" replaced`)
+      setImportConflict(null)
+      navigate(`/profiles/${existingId}`)
+    } catch {
+      toast.error("Failed to replace profile.")
+      setImportConflict(null)
+    }
   }
 
   if (loading) return <LoadingSpinner />
@@ -222,7 +310,7 @@ export default function ProfilePage() {
         {/* Name */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Name</CardTitle>
+            <CardTitle className="text-base">Name <span className="text-destructive">*</span></CardTitle>
           </CardHeader>
           <CardContent>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -232,7 +320,7 @@ export default function ProfilePage() {
         {/* CV Upload */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">CV</CardTitle>
+            <CardTitle className="text-base">CV <span className="text-destructive">*</span></CardTitle>
           </CardHeader>
           <CardContent>
             {profile.cv_path ? (
@@ -265,22 +353,77 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Tag lists */}
+        {/* Core profile */}
         <TagCard
           label="Career Goals"
           items={targets}
           onChange={setTargets}
           placeholder="e.g. Find a software engineering job / Obtain an AI certificate / Join communities"
           examples={["Move into a leadership position", "Earn a professional certification", "Transition to a new industry", "Grow my professional network"]}
+          required
         />
+        <TagCard label="Skills" items={skills} onChange={setSkills} required />
+
+        {/* Career & Job section */}
+        <div className="lg:col-span-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Career & Job Preferences</h3>
+        </div>
+        <TagCard
+          label="Preferred Job Titles"
+          items={preferredTitles}
+          onChange={setPreferredTitles}
+          placeholder="e.g. Staff Engineer, Engineering Manager"
+          examples={["Software Engineer", "Engineering Manager", "Data Scientist", "Product Manager"]}
+          required
+        />
+        <SelectCard label="Experience Level" value={experienceLevel} onChange={setExperienceLevel} options={EXPERIENCE_LEVELS} optional />
+        <TagCard
+          label="Industries"
+          items={industries}
+          onChange={setIndustries}
+          placeholder="e.g. Fintech, AI/ML, Healthcare"
+          examples={["Fintech", "AI/ML", "Healthcare", "Climate Tech"]}
+          optional
+        />
+        <TagCard
+          label="Locations"
+          items={locations}
+          onChange={setLocations}
+          placeholder="e.g. Remote, New York, London"
+          examples={["Remote", "New York", "London", "Berlin"]}
+          optional
+        />
+        <SelectCard label="Work Arrangement" value={workArrangement} onChange={setWorkArrangement} options={WORK_ARRANGEMENTS} optional />
         <TagCard
           label="Constraints"
           items={constraints}
           onChange={setConstraints}
-          placeholder="e.g. Remote only, EU timezone"
-          examples={["Remote only", "No relocation", "Part-time or flexible hours", "Within commuting distance"]}
+          placeholder="e.g. No relocation, EU timezone"
+          examples={["No relocation", "Part-time or flexible hours", "Salary > 150k", "No startups"]}
+          optional
         />
-        <TagCard label="Skills" items={skills} onChange={setSkills} />
+
+        {/* Events & Networking section */}
+        <div className="lg:col-span-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Events & Networking</h3>
+        </div>
+        <SelectCard label="Event Attendance" value={eventAttendance} onChange={setEventAttendance} options={EVENT_ATTENDANCES} optional description="How you prefer to attend events. This controls whether scouts search for in-person events near your locations, virtual events, or both." />
+
+        {/* Learning & Certification section */}
+        <div className="lg:col-span-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Learning & Certifications</h3>
+        </div>
+        <TagCard
+          label="Target Certifications"
+          items={targetCertifications}
+          onChange={setTargetCertifications}
+          placeholder="e.g. AWS Solutions Architect, PMP"
+          examples={["AWS Solutions Architect", "PMP", "CKA/CKAD", "Google Cloud Professional"]}
+          optional
+        />
+        <SelectCard label="Learning Format" value={learningFormat} onChange={setLearningFormat} options={LEARNING_FORMATS} optional />
+        <SelectCard label="Learning Budget" value={learningBudget} onChange={setLearningBudget} options={LEARNING_BUDGETS} optional />
+        <SelectCard label="Time Commitment" value={timeCommitment} onChange={setTimeCommitment} options={TIME_COMMITMENTS} optional />
 
         {/* Quick actions */}
         <Card>
@@ -306,6 +449,20 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+      <AlertDialog open={!!importConflict} onOpenChange={(open) => !open && setImportConflict(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Profile already exists</AlertDialogTitle>
+            <AlertDialogDescription>
+              A profile named "{String(importConflict?.data?.name ?? "")}" already exists. Do you want to replace it with the imported data?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleImportReplace}>Replace</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -316,12 +473,16 @@ function TagCard({
   onChange,
   placeholder,
   examples,
+  optional,
+  required,
 }: {
   label: string
   items: string[]
   onChange: (v: string[]) => void
   placeholder?: string
   examples?: string[]
+  optional?: boolean
+  required?: boolean
 }) {
   const [input, setInput] = useState("")
 
@@ -336,7 +497,11 @@ function TagCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{label}</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2">
+              {label}
+              {required && <span className="text-destructive">*</span>}
+              {optional && <span className="text-xs font-normal text-muted-foreground">(optional)</span>}
+            </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-1 mb-2">
@@ -373,6 +538,46 @@ function TagCard({
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SelectCard({
+  label,
+  value,
+  onChange,
+  options,
+  optional,
+  description,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  optional?: boolean
+  description?: string
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+              {label}
+              {optional && <span className="text-xs font-normal text-muted-foreground">(optional)</span>}
+            </CardTitle>
+        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+      </CardHeader>
+      <CardContent>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="" className="bg-background text-foreground">Not set</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt} className="bg-background text-foreground">{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+          ))}
+        </select>
       </CardContent>
     </Card>
   )

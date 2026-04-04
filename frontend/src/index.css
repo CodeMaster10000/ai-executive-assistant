@@ -38,6 +38,22 @@
   --sidebar-accent-foreground: oklch(0.30 0.04 265);
   --sidebar-border: oklch(0.92 0.008 265);
   --sidebar-ring: oklch(0.50 0.20 265);
+  /* Toast colors — all indigo-tinted (hue 265) to match light theme */
+  --toast-normal-bg: oklch(0.97 0.03 265);
+  --toast-normal-text: oklch(0.25 0.06 265);
+  --toast-normal-border: oklch(0.85 0.08 265);
+  --toast-success-bg: oklch(0.96 0.04 265);
+  --toast-success-text: oklch(0.30 0.08 265);
+  --toast-success-border: oklch(0.80 0.10 265);
+  --toast-error-bg: oklch(0.96 0.04 265);
+  --toast-error-text: oklch(0.30 0.08 265);
+  --toast-error-border: oklch(0.80 0.10 265);
+  --toast-warning-bg: oklch(0.96 0.04 265);
+  --toast-warning-text: oklch(0.30 0.08 265);
+  --toast-warning-border: oklch(0.80 0.10 265);
+  --toast-info-bg: oklch(0.96 0.04 265);
+  --toast-info-text: oklch(0.30 0.08 265);
+  --toast-info-border: oklch(0.80 0.10 265);
 }
 
 .dark {
@@ -74,6 +90,22 @@
   --sidebar-accent-foreground: oklch(0.90 0.01 210);
   --sidebar-border: oklch(0.32 0.025 270);
   --sidebar-ring: oklch(0.72 0.14 195);
+  /* Toast colors — all cyan-tinted (hue 195) to match dark theme */
+  --toast-normal-bg: oklch(0.22 0.03 195);
+  --toast-normal-text: oklch(0.90 0.08 195);
+  --toast-normal-border: oklch(0.40 0.08 195);
+  --toast-success-bg: oklch(0.24 0.04 195);
+  --toast-success-text: oklch(0.88 0.10 195);
+  --toast-success-border: oklch(0.45 0.10 195);
+  --toast-error-bg: oklch(0.24 0.04 195);
+  --toast-error-text: oklch(0.88 0.10 195);
+  --toast-error-border: oklch(0.45 0.10 195);
+  --toast-warning-bg: oklch(0.24 0.04 195);
+  --toast-warning-text: oklch(0.88 0.10 195);
+  --toast-warning-border: oklch(0.45 0.10 195);
+  --toast-info-bg: oklch(0.24 0.04 195);
+  --toast-info-text: oklch(0.88 0.10 195);
+  --toast-info-border: oklch(0.45 0.10 195);
 }
 
 @theme inline {
