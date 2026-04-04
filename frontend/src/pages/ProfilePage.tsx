@@ -27,9 +27,7 @@ import { toast } from "sonner"
 const EXPERIENCE_LEVELS = ["junior", "mid", "senior", "lead", "principal", "executive"]
 const WORK_ARRANGEMENTS = ["remote", "hybrid", "onsite", "flexible"]
 const EVENT_ATTENDANCES = ["local", "remote", "no preference"]
-const LEARNING_BUDGETS = ["free only", "under $100", "under $500", "under $1000", "under $2000", "no limit"]
 const LEARNING_FORMATS = ["online", "in-person", "self-paced", "instructor-led"]
-const TIME_COMMITMENTS = ["1-2 hrs/week", "3-5 hrs/week", "5-10 hrs/week", "10-20 hrs/week", "weekends only", "full-time"]
 
 export default function ProfilePage() {
   const { profileId } = useParams()
@@ -51,9 +49,7 @@ export default function ProfilePage() {
   const [eventAttendance, setEventAttendance] = useState("")
   // Learning & Certification
   const [targetCertifications, setTargetCertifications] = useState<string[]>([])
-  const [learningBudget, setLearningBudget] = useState("")
   const [learningFormat, setLearningFormat] = useState("")
-  const [timeCommitment, setTimeCommitment] = useState("")
   const [importConflict, setImportConflict] = useState<{ existingId: string; data: Record<string, unknown> } | null>(null)
 
   const draftKey = profileId ? `profile-draft-${profileId}` : null
@@ -78,9 +74,7 @@ export default function ProfilePage() {
             setWorkArrangement(draft.work_arrangement ?? p.work_arrangement ?? "")
             setEventAttendance(draft.event_attendance ?? p.event_attendance ?? "")
             setTargetCertifications(draft.target_certifications ?? p.target_certifications ?? [])
-            setLearningBudget(draft.learning_budget ?? p.learning_budget ?? "")
             setLearningFormat(draft.learning_format ?? p.learning_format ?? "")
-            setTimeCommitment(draft.time_commitment ?? p.time_commitment ?? "")
             return
           } catch { /* ignore corrupt draft */ }
         }
@@ -95,9 +89,7 @@ export default function ProfilePage() {
         setWorkArrangement(p.work_arrangement ?? "")
         setEventAttendance(p.event_attendance ?? "")
         setTargetCertifications(p.target_certifications ?? [])
-        setLearningBudget(p.learning_budget ?? "")
         setLearningFormat(p.learning_format ?? "")
-        setTimeCommitment(p.time_commitment ?? "")
       })
       .finally(() => setLoading(false))
   }, [profileId, draftKey])
@@ -112,15 +104,13 @@ export default function ProfilePage() {
       name, targets, constraints, skills,
       preferred_titles: preferredTitles, experience_level: experienceLevel,
       industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
-      target_certifications: targetCertifications, learning_budget: learningBudget,
-      learning_format: learningFormat, time_commitment: timeCommitment,
+      target_certifications: targetCertifications, learning_format: learningFormat,
     }
     const saved = {
       name: profile.name, targets: profile.targets ?? [], constraints: profile.constraints ?? [], skills: profile.skills ?? [],
       preferred_titles: profile.preferred_titles ?? [], experience_level: profile.experience_level ?? "",
       industries: profile.industries ?? [], locations: profile.locations ?? [], work_arrangement: profile.work_arrangement ?? "", event_attendance: profile.event_attendance ?? "",
-      target_certifications: profile.target_certifications ?? [], learning_budget: profile.learning_budget ?? "",
-      learning_format: profile.learning_format ?? "", time_commitment: profile.time_commitment ?? "",
+      target_certifications: profile.target_certifications ?? [], learning_format: profile.learning_format ?? "",
     }
     const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
     dirtyRef.current = dirty
@@ -129,7 +119,7 @@ export default function ProfilePage() {
     } else {
       localStorage.removeItem(draftKey)
     }
-  }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, targetCertifications, learningBudget, learningFormat, timeCommitment, profile])
+  }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, targetCertifications, learningFormat, profile])
 
   // Warn on navigation away with unsaved changes
   useEffect(() => {
@@ -165,9 +155,7 @@ export default function ProfilePage() {
       work_arrangement: workArrangement || null,
       event_attendance: eventAttendance || null,
       target_certifications: targetCertifications.length > 0 ? targetCertifications : null,
-      learning_budget: learningBudget || null,
       learning_format: learningFormat || null,
-      time_commitment: timeCommitment || null,
     }
     const updated = await updateProfile(profileId, data)
     setProfile(updated)
@@ -187,7 +175,13 @@ export default function ProfilePage() {
 
   async function handleCvUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!profileId || !e.target.files?.[0]) return
-    const updated = await uploadCv(profileId, e.target.files[0])
+    const file = e.target.files[0]
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Only PDF files are accepted")
+      e.target.value = ""
+      return
+    }
+    const updated = await uploadCv(profileId, file)
     setProfile(updated)
     toast.success("CV uploaded")
   }
@@ -328,7 +322,7 @@ export default function ProfilePage() {
                 Uploaded: {profile.cv_path.split("/").pop()}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground mb-2">No CV uploaded</p>
+              <p className="text-sm text-muted-foreground mb-2">No CV uploaded. Must be in PDF format.</p>
             )}
             <div className="flex gap-2">
               <Label
@@ -337,7 +331,7 @@ export default function ProfilePage() {
               >
                 <Upload className="h-4 w-4" /> Upload CV
               </Label>
-              <input id="cv-upload" type="file" className="hidden" onChange={handleCvUpload} />
+              <input id="cv-upload" type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
               {profile.cv_path && (
                 <Button
                   variant="outline"
@@ -422,8 +416,6 @@ export default function ProfilePage() {
           optional
         />
         <SelectCard label="Learning Format" value={learningFormat} onChange={setLearningFormat} options={LEARNING_FORMATS} optional />
-        <SelectCard label="Learning Budget" value={learningBudget} onChange={setLearningBudget} options={LEARNING_BUDGETS} optional />
-        <SelectCard label="Time Commitment" value={timeCommitment} onChange={setTimeCommitment} options={TIME_COMMITMENTS} optional />
 
         {/* Quick actions */}
         <Card>

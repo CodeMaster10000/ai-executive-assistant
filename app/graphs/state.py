@@ -24,9 +24,7 @@ class DailyState(TypedDict, total=False):
     work_arrangement: str
     event_attendance: str
     target_certifications: list[str]
-    learning_budget: str
     learning_format: str
-    time_commitment: str
 
     # GoalExtractor output
     search_prompts: dict[str, str]
@@ -88,9 +86,7 @@ class WeeklyState(TypedDict, total=False):
     work_arrangement: str
     event_attendance: str
     target_certifications: list[str]
-    learning_budget: str
     learning_format: str
-    time_commitment: str
 
     # GoalExtractor output
     search_prompts: dict[str, str]

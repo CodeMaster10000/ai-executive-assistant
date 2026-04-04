@@ -12,9 +12,7 @@ export interface ProfileCreate {
   work_arrangement?: string | null
   event_attendance?: string | null
   target_certifications?: string[] | null
-  learning_budget?: string | null
   learning_format?: string | null
-  time_commitment?: string | null
 }
 
 export interface ProfileUpdate {
@@ -29,9 +27,7 @@ export interface ProfileUpdate {
   work_arrangement?: string | null
   event_attendance?: string | null
   target_certifications?: string[] | null
-  learning_budget?: string | null
   learning_format?: string | null
-  time_commitment?: string | null
 }
 
 export interface Profile {
@@ -48,9 +44,7 @@ export interface Profile {
   work_arrangement: string | null
   event_attendance: string | null
   target_certifications: string[] | null
-  learning_budget: string | null
   learning_format: string | null
-  time_commitment: string | null
   created_at: string
   updated_at: string
 }

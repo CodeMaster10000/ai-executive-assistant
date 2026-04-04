@@ -64,9 +64,7 @@ def profile_to_read(profile: UserProfile) -> ProfileRead:
         work_arrangement=profile.work_arrangement,
         event_attendance=profile.event_attendance,
         target_certifications=_deserialize_list(profile.target_certifications),
-        learning_budget=profile.learning_budget,
         learning_format=profile.learning_format,
-        time_commitment=profile.time_commitment,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -86,9 +84,7 @@ async def create_profile(db: AsyncSession, body: ProfileCreate) -> ProfileRead:
         work_arrangement=body.work_arrangement,
         event_attendance=body.event_attendance,
         target_certifications=_serialize_list(body.target_certifications),
-        learning_budget=body.learning_budget,
         learning_format=body.learning_format,
-        time_commitment=body.time_commitment,
     )
     db.add(profile)
     await db.commit()
@@ -217,9 +213,7 @@ async def export_profile(db: AsyncSession, profile_id: str) -> dict | None:
         "work_arrangement": profile.work_arrangement,
         "event_attendance": profile.event_attendance,
         "target_certifications": _deserialize_list(profile.target_certifications),
-        "learning_budget": profile.learning_budget,
         "learning_format": profile.learning_format,
-        "time_commitment": profile.time_commitment,
     }
 
 
@@ -238,9 +232,7 @@ async def import_profile(db: AsyncSession, data: dict) -> ProfileRead:
         work_arrangement=data.get("work_arrangement"),
         event_attendance=data.get("event_attendance"),
         target_certifications=data.get("target_certifications"),
-        learning_budget=data.get("learning_budget"),
         learning_format=data.get("learning_format"),
-        time_commitment=data.get("time_commitment"),
     )
     return await create_profile(db, body)
 

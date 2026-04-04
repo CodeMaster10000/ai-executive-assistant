@@ -19,9 +19,7 @@ class ProfileCreate(BaseModel):
     event_attendance: str | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
-    learning_budget: str | None = None
     learning_format: str | None = None
-    time_commitment: str | None = None
 
 
 class ProfileUpdate(BaseModel):
@@ -40,9 +38,7 @@ class ProfileUpdate(BaseModel):
     event_attendance: str | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
-    learning_budget: str | None = None
     learning_format: str | None = None
-    time_commitment: str | None = None
 
     @field_validator("preferred_titles")
     @classmethod
@@ -70,9 +66,7 @@ class ProfileRead(BaseModel):
     event_attendance: str | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
-    learning_budget: str | None = None
     learning_format: str | None = None
-    time_commitment: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -93,6 +87,4 @@ class ProfileExport(BaseModel):
     event_attendance: str | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
-    learning_budget: str | None = None
     learning_format: str | None = None
-    time_commitment: str | None = None

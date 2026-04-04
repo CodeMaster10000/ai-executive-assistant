@@ -31,9 +31,7 @@ class UserProfile(Base):
 
     # Learning & Certification
     target_certifications: Mapped[str | None] = mapped_column(Text, nullable=True)
-    learning_budget: Mapped[str | None] = mapped_column(String(50), nullable=True)
     learning_format: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    time_commitment: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

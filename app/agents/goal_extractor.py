@@ -63,9 +63,7 @@ class GoalExtractorAgent(LLMAgent):
         work_arrangement = state.get("work_arrangement", "")
         event_attendance = state.get("event_attendance", "")
         target_certs = state.get("target_certifications", [])
-        learning_budget = state.get("learning_budget", "")
         learning_format = state.get("learning_format", "")
-        time_commitment = state.get("time_commitment", "")
 
         # Build job_prompt deterministically from structured fields
         job_prompt = self._build_job_prompt(
@@ -100,12 +98,8 @@ class GoalExtractorAgent(LLMAgent):
             user_parts.append(f"Event attendance: {event_attendance}")
         if target_certs:
             user_parts.append(f"Target certifications: {json.dumps(target_certs)}")
-        if learning_budget:
-            user_parts.append(f"Learning budget: {learning_budget}")
         if learning_format:
             user_parts.append(f"Learning format: {learning_format}")
-        if time_commitment:
-            user_parts.append(f"Time commitment for learning: {time_commitment}")
         if cv_summary:
             user_parts.append(f"CV summary:\n{cv_summary[:3000]}")
 

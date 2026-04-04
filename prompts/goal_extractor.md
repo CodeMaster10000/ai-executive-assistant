@@ -53,9 +53,7 @@ When the user provides structured profile fields, use them as hard constraints:
 
 ### Learning & Certification Fields
 - **Target certifications**: Use these exact certification names in cert_prompt. Search for the official vendor programs.
-- **Learning budget**: Filter course_prompt and cert_prompt by cost. "free only" means only free courses/certifications. A specific budget caps recommendations.
 - **Learning format**: "online" means online/virtual courses. "self-paced" means asynchronous. "instructor-led" means live classes. Apply to course_prompt only.
-- **Time commitment**: Factor into course_prompt only -- recommend short courses for low time, bootcamps for full-time.
 
 ## Few-Shot Examples
 
@@ -79,11 +77,9 @@ When the user provides structured profile fields, use them as hard constraints:
 **Event attendance**: remote
 **Target certifications**: ["TensorFlow Developer Certificate", "AWS Machine Learning Specialty"]
 **Learning format**: online
-**Learning budget**: $500
-**Time commitment**: 10 hrs/week
 
 - **cert_prompt**: "Search tensorflow.org and aws.amazon.com for the TensorFlow Developer Certificate and AWS Machine Learning Specialty certification for a senior Python developer"
-- **course_prompt**: "Search Coursera, Udemy, and DataCamp for online AI/ML courses under $500 suitable for a senior Python developer, prioritizing self-paced programs that fit 10 hours per week"
+- **course_prompt**: "Search Coursera, Udemy, and DataCamp for online AI/ML courses suitable for a senior Python developer"
 - **event_prompt**: "Search Eventbrite, Meetup, and Luma for 2026 virtual AI/ML engineering and fintech conferences and events"
 - **group_prompt**: "Search Discord, Reddit, and LinkedIn Groups for AI/ML engineering and fintech communities and discussion forums"
 - **trend_prompt**: "Search Google Trends, Exploding Topics, Reddit r/technology, TechCrunch, and ArXiv for emerging trends in AI engineering, fintech machine learning infrastructure, and Python ecosystem developments"
