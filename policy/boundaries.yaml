@@ -5,7 +5,7 @@ agents:
   web_scrapers:
     inputs: [search_prompt, search_category]
     outputs: [raw_job_results, raw_cert_results, raw_event_results, raw_group_results, raw_trend_results]
-  url_validator:
+  content_validator:
     inputs: [raw_job_results, raw_cert_results, raw_event_results, raw_group_results, raw_trend_results]
     outputs: [raw_job_results, raw_cert_results, raw_event_results, raw_group_results, raw_trend_results]
   data_formatter:

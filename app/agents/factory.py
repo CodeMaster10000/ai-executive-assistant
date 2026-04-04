@@ -11,7 +11,6 @@ from app.agents.cfo_agent import CFOAgent
 from app.agents.cover_letter_agent import CoverLetterAgent
 from app.agents.data_formatter import DataFormatterAgent
 from app.agents.goal_extractor import GoalExtractorAgent
-from app.agents.url_validator import URLValidatorAgent
 from app.agents.web_scraper import WebScraperAgent
 from app.llm.prompt_loader import PromptLoader
 
@@ -55,7 +54,6 @@ class AgentFactory:
         self._ceo: CEOAgent | None = None
         self._cfo: CFOAgent | None = None
         self._cover_letter: CoverLetterAgent | None = None
-        self._url_validator: URLValidatorAgent | None = None
 
         # Cache of ChatOpenAI instances keyed by model name
         self._llm_cache: dict[str, Any] = {}
@@ -133,15 +131,6 @@ class AgentFactory:
                 prompt_loader=self._prompt_loader,
             )
         return self._cfo
-
-    def create_url_validator(self) -> AgentProtocol:
-        """Return the singleton URLValidatorAgent, creating it on first call."""
-        if self._url_validator is None:
-            from app.llm.url_fetch_tool import URLFetchTool
-
-            fetch_tool = URLFetchTool()
-            self._url_validator = URLValidatorAgent(fetch_tool=fetch_tool)
-        return self._url_validator
 
     def create_cover_letter_agent(self) -> AgentProtocol:
         """Return the singleton CoverLetterAgent, creating it on first call."""

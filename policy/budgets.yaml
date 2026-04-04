@@ -5,7 +5,7 @@ agents:
   web_scrapers:
     max_steps: 5
     max_tokens: 4000
-  url_validator:
+  content_validator:
     max_steps: 5
     max_tokens: 4000
   data_formatter:
@@ -26,7 +26,6 @@ agents:
   audit_writer:
     max_steps: 5
     max_tokens: 2000
-
 global:
   max_run_duration_seconds: 300
   max_output_items: 50

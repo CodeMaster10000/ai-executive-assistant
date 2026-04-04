@@ -76,7 +76,9 @@ def warn(pipeline: str, state: dict[str, Any], msg: str) -> None:
 
 async def call_agent(agent: AgentProtocol, state: dict[str, Any]) -> dict[str, Any]:
     """Call an agent, running sync agents in a thread to avoid blocking the event loop."""
-    if asyncio.iscoroutinefunction(getattr(agent, "__call__", agent)):
+    if asyncio.iscoroutinefunction(agent) or asyncio.iscoroutinefunction(
+        getattr(agent, "__call__", None)
+    ):
         return await agent(state)
     return await asyncio.to_thread(agent, state)
 
@@ -124,6 +126,7 @@ def make_node(
     audit_writer: AuditWriter | None = None,
     verifier: Verifier | None = None,
     event_manager: Any | None = None,
+    node_type: str = "agent",
 ) -> Callable[..., Any]:
     """Create a graph node that runs a single agent with full lifecycle:
 
@@ -137,26 +140,36 @@ def make_node(
     8. Accumulate ``verifier_results`` in state
     """
 
+    # Derive event type prefixes from node_type
+    # "agent" -> "agent_start"/"agent_end"/"agent_started"/"agent_completed"
+    # "static_validator" -> "static_validator_start"/"static_validator_end"/...
+    evt_start = f"{node_type}_start"
+    evt_end = f"{node_type}_end"
+    sse_started = f"{node_type}_started"
+    sse_completed = f"{node_type}_completed"
+
     async def _node(state: dict[str, Any]) -> dict[str, Any]:
         check_tool(policy_engine, agent_name, tool_name)
         run_id = state.get("run_id", "unknown")
         now = datetime.now(timezone.utc).isoformat
 
-        # SSE: agent started
+        # SSE: started
         await _publish_sse(event_manager, run_id, {
-            "type": "agent_started",
+            "type": sse_started,
             "agent": agent_name,
+            "node_type": node_type,
             "timestamp": now(),
         })
 
         node_start(pipeline, state, agent_name)
 
-        # Audit: agent start
+        # Audit: start
         if audit_writer:
             await audit_writer.append(run_id, AuditEvent(
                 timestamp=now(),
-                event_type="agent_start",
+                event_type=evt_start,
                 agent=agent_name,
+                node_type=node_type,
             ))
 
         t0 = time.monotonic()
@@ -185,12 +198,13 @@ def make_node(
                 "timestamp": verification.timestamp,
             }
 
-        # Audit: agent end
+        # Audit: end
         if audit_writer:
             await audit_writer.append(run_id, AuditEvent(
                 timestamp=now(),
-                event_type="agent_end",
+                event_type=evt_end,
                 agent=agent_name,
+                node_type=node_type,
                 data=result,
             ))
             if verification_dict:
@@ -198,13 +212,15 @@ def make_node(
                     timestamp=now(),
                     event_type="verifier_result",
                     agent=agent_name,
+                    node_type=node_type,
                     data=verification_dict,
                 ))
 
-        # SSE: agent completed
+        # SSE: completed
         await _publish_sse(event_manager, run_id, {
-            "type": "agent_completed",
+            "type": sse_completed,
             "agent": agent_name,
+            "node_type": node_type,
             "verification_status": verification_status,
             "elapsed": round(elapsed, 2),
             "timestamp": now(),
@@ -236,8 +252,13 @@ def make_fan_out_node(
     audit_writer: AuditWriter | None = None,
     verifier: Verifier | None = None,
     event_manager: Any | None = None,
+    scraper_overrides: dict[str, AgentProtocol] | None = None,
 ) -> Callable[..., Any]:
-    """Create a fan-out node that runs scrapers concurrently, then verifies the merged output."""
+    """Create a fan-out node that runs scrapers concurrently, then verifies the merged output.
+
+    Use ``scraper_overrides`` to substitute a different callable for specific
+    categories (e.g. a validated job scraper wrapper for the ``"job"`` category).
+    """
 
     async def _node(state: dict[str, Any]) -> dict[str, Any]:
         check_tool(policy_engine, agent_name, tool_name)
@@ -266,12 +287,13 @@ def make_fan_out_node(
         t0 = time.monotonic()
 
         async def _run_scraper(category: str, prompt_key: str) -> dict[str, Any]:
+            agent = (scraper_overrides or {}).get(category, scraper)
             search_state = {
                 **state,
                 "search_prompt": prompts.get(prompt_key, ""),
                 "search_category": category,
             }
-            return await call_agent(scraper, search_state)
+            return await call_agent(agent, search_state)
 
         returns = await asyncio.gather(
             *[_run_scraper(cat, pk) for cat, pk in categories]

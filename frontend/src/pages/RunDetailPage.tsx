@@ -16,15 +16,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 
 const AGENTS_BY_MODE: Record<string, string[]> = {
-  daily: ["goal_extractor", "web_scrapers", "url_validator", "data_formatter", "audit_writer"],
-  weekly: ["goal_extractor", "web_scrapers", "url_validator", "data_formatter", "ceo", "cfo", "audit_writer"],
+  daily: ["goal_extractor", "web_scrapers", "content_validator", "data_formatter", "audit_writer"],
+  weekly: ["goal_extractor", "web_scrapers", "content_validator", "data_formatter", "ceo", "cfo", "audit_writer"],
   cover_letter: ["cover_letter_agent", "audit_writer"],
 }
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
   goal_extractor: "Goal Extractor",
   web_scrapers: "Web Scraper",
-  url_validator: "Content Validator",
+  content_validator: "Content Validator",
   data_formatter: "Data Formatter",
   audit_writer: "Audit Writer",
   ceo: "CEO",
@@ -39,8 +39,8 @@ function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, A
   const statuses: Record<string, AgentStatus> = {}
   for (const name of agents) statuses[name] = "idle"
   for (const e of events) {
-    if (e.agent && e.type === "agent_started") statuses[e.agent] = "running"
-    if (e.agent && e.type === "agent_completed") {
+    if (e.agent && (e.type === "agent_started" || e.type === "static_validator_started")) statuses[e.agent] = "running"
+    if (e.agent && (e.type === "agent_completed" || e.type === "static_validator_completed")) {
       if (e.verification_status === "fail") {
         statuses[e.agent] = "failed"
       } else if (e.verification_status === "partial") {
@@ -58,10 +58,10 @@ function deriveAgentStatusesFromAudit(mode: string, events: AuditEvent[]): Recor
   const statuses: Record<string, AgentStatus> = {}
   for (const name of agents) statuses[name] = "idle"
   for (const e of events) {
-    if (e.event_type === "agent_start" && agents.includes(e.agent)) {
+    if ((e.event_type === "agent_start" || e.event_type === "static_validator_start") && agents.includes(e.agent)) {
       statuses[e.agent] = "running"
     }
-    if (e.event_type === "agent_end" && agents.includes(e.agent)) {
+    if ((e.event_type === "agent_end" || e.event_type === "static_validator_end") && agents.includes(e.agent)) {
       statuses[e.agent] = "complete"
     }
     if (e.event_type === "verifier_result" && agents.includes(e.agent)) {
@@ -314,6 +314,8 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
   const dotColor: Record<string, string> = {
     agent_start: "bg-blue-500",
     agent_end: "bg-green-500",
+    static_validator_start: "bg-blue-500",
+    static_validator_end: "bg-green-500",
     verifier_result: "bg-yellow-500",
     error: "bg-red-500",
   }

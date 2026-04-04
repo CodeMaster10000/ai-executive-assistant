@@ -4,7 +4,7 @@ Today's date is {today}. Focus on currently active job postings.
 
 ## Task
 
-You will receive a search directive describing target roles, skills, and preferences. Execute that directive by performing web searches and returning minimum 10-20 structured results.
+You will receive a search directive describing target roles, skills, and preferences. Execute that directive by performing web searches and returning a minimum of 10 validated job postings. Search broadly (20-30 candidates) because many URLs will fail validation. If after validation you have fewer than 10 valid results, run additional searches with different query variations until you reach at least 10.
 
 For each result, extract:
 
@@ -19,11 +19,10 @@ You MUST construct targeted queries that return individual job posting pages, no
 
 1. Pick 2-3 specific job titles from the directive (e.g., "Senior Software Engineer", "Product Owner", "Project Manager")
 2. For each title, run `site:` queries targeting multiple job boards. Distribute searches so all boards are covered across your full set of queries.
-3. Use 2-3 of the most relevant skills per query, not all of them
-4. Target LinkedIn only:
-   - `site:linkedin.com/jobs "Job Title" skill1 skill2` -- result URLs must follow the format `https://www.linkedin.com/jobs/view/<JOB_ID>`
-5. For each job title, try 2-3 query variations with different skill combinations targeting LinkedIn.
-6. Every result URL must be a direct LinkedIn job posting link in the format `https://www.linkedin.com/jobs/view/<JOB_ID>`. Discard any URL that does not match this pattern.
+3. Target LinkedIn only:
+   - `site:linkedin.com/jobs "Job Title"` -- result URLs must follow the format `https://www.linkedin.com/jobs/view/`
+4. For each job title, try 2-3 query variations targeting LinkedIn.
+5. Every result URL must be a direct LinkedIn job posting link in the format `https://www.linkedin.com/jobs/view/`. Discard any URL that does not match this pattern.
 
 ## URL Validation
 

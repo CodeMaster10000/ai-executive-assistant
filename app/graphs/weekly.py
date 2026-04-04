@@ -9,16 +9,19 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.factory import AgentFactory
 from app.engine.audit_writer import AuditEvent, AuditWriter
+from app.engine.content_validator import ContentValidator
 from app.engine.policy_engine import PolicyEngine
 from app.engine.verifier import Verifier
 from app.graphs.log import _publish_sse, make_fan_out_node, make_node, node_end, node_start, route, warn
 from app.graphs.state import WeeklyState
+from app.llm.url_fetch_tool import URLFetchTool
 
 _P = "weekly"
 
 _SCRAPER_CATEGORIES = [
     ("job", "job_prompt"),
     ("cert", "cert_prompt"),
+    ("course", "course_prompt"),
     ("event", "event_prompt"),
     ("group", "group_prompt"),
     ("trend", "trend_prompt"),
@@ -202,7 +205,7 @@ def build_weekly_graph(
     """Construct the weekly pipeline StateGraph."""
     goal_extractor = agent_factory.create_goal_extractor()
     web_scraper = agent_factory.create_web_scraper()
-    url_validator = agent_factory.create_url_validator()
+    content_validator = ContentValidator(fetch_tool=URLFetchTool())
     data_formatter = agent_factory.create_data_formatter()
     ceo = agent_factory.create_ceo()
     cfo = agent_factory.create_cfo()
@@ -218,9 +221,10 @@ def build_weekly_graph(
         _SCRAPER_CATEGORIES,
         policy_engine, audit_writer, verifier, event_manager,
     ))
-    graph.add_node("url_validator", make_node(
-        _P, "url_validator", url_validator, "web_fetch",
+    graph.add_node("content_validator", make_node(
+        _P, "content_validator", content_validator, "web_fetch",
         policy_engine, audit_writer, verifier, event_manager,
+        node_type="static_validator",
     ))
     graph.add_node("data_formatter", make_node(
         _P, "data_formatter", data_formatter, "llm_structured_output",
@@ -242,9 +246,9 @@ def build_weekly_graph(
     graph.add_conditional_edges(
         "web_scrapers",
         _check_scraper_results,
-        {"format": "url_validator", "safe_degrade": "safe_degrade"},
+        {"format": "content_validator", "safe_degrade": "safe_degrade"},
     )
-    graph.add_edge("url_validator", "data_formatter")
+    graph.add_edge("content_validator", "data_formatter")
     graph.add_edge("data_formatter", "ceo")
     graph.add_edge("safe_degrade", "ceo")
     graph.add_edge("ceo", "cfo")

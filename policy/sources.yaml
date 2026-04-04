@@ -6,6 +6,6 @@ scouts:
     denied_sources:
       - "*.onion"
     # Job-specific: only linkedin.com/jobs is allowed.
-    # Enforced by url_validator.py regex, not by this policy file.
+    # Enforced by content_validator.py regex, not by this policy file.
     job_sources:
       - "linkedin.com"

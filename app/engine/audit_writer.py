@@ -20,6 +20,7 @@ class AuditEvent:
     timestamp: str
     event_type: str  # agent_start, agent_end, tool_call, tool_response, output, verifier_result, error
     agent: str | None = None
+    node_type: str | None = None  # "agent" or "static_validator"
     data: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:

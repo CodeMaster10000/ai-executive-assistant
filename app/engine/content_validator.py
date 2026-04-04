@@ -1,4 +1,4 @@
-"""URL Validator agent: deterministic validation of URLs from raw results."""
+"""Content validator: deterministic validation of URLs from raw results."""
 
 from __future__ import annotations
 
@@ -6,14 +6,35 @@ import asyncio
 import logging
 from typing import Any
 
-from app.agents.schemas import URLValidationItem
+from pydantic import BaseModel, Field
+
 from app.llm.url_fetch_tool import URLFetchTool
 
 logger = logging.getLogger(__name__)
 
+
+# -- Schemas --
+
+class URLValidationItem(BaseModel):
+    """Validation result for a single URL."""
+
+    url: str = Field(description="The URL that was validated")
+    valid: bool = Field(description="True if the content is still active and relevant")
+    reason: str = Field(default="", description="Brief reason if invalid")
+
+
+class URLValidationOutput(BaseModel):
+    """Structured output from the content validator with per-URL validity flags."""
+
+    results: list[URLValidationItem] = Field(default_factory=list)
+
+
+# -- Constants --
+
 _CATEGORIES = [
     ("job", "raw_job_results"),
     ("cert", "raw_cert_results"),
+    ("course", "raw_course_results"),
     ("event", "raw_event_results"),
     ("group", "raw_group_results"),
     ("trend", "raw_trend_results"),
@@ -39,9 +60,14 @@ _INVALID_PHRASES: dict[str, list[str]] = {
         "This job post is closed",
     ],
     "cert": [
+        "this certification has been discontinued",
+        "this program is no longer offered",
+        "no longer available",
+        "certification not found",
+    ],
+    "course": [
         "this course has been retired",
         "no longer available",
-        "this certification has been discontinued",
         "this program is no longer offered",
         "course not found",
     ],
@@ -74,8 +100,8 @@ _LINKEDIN_ACTUAL_PAGE_MARKERS = [
 ]
 
 
-class URLValidatorAgent:
-    """Deterministic URL validator -- no LLM, pure phrase/content checks.
+class ContentValidator:
+    """Deterministic content validator -- no LLM, pure phrase/content checks.
 
     Fetches each URL and applies rules:
     - HTTP 404 or fetch error -> invalid
@@ -84,7 +110,7 @@ class URLValidatorAgent:
     - Otherwise -> valid
     """
 
-    agent_name = "url_validator"
+    agent_name = "content_validator"
 
     def __init__(self, fetch_tool: URLFetchTool | None = None):
         self._fetch_tool = fetch_tool
@@ -113,7 +139,7 @@ class URLValidatorAgent:
             if result.valid:
                 valid_by_key.setdefault(key, []).append(item)
             else:
-                logger.info("URL validator flagged %s as invalid: %s", url, result.reason)
+                logger.info("Content validator flagged %s as invalid: %s", url, result.reason)
                 invalid_results.append(result)
 
         # Include web scraper filtered URLs in the validation results
@@ -165,14 +191,6 @@ def _check_content(url: str, category: str, raw: Any) -> URLValidationItem:
     for phrase in _INVALID_PHRASES.get(category, []):
         if phrase in body_lower:
             return URLValidationItem(url=url, valid=False, reason=phrase)
-
-    # LinkedIn-specific: detect generic pages that lack actual job page markers
-    # if category == "job" and "linkedin.com" in url.lower():
-    #     if not any(marker in body_lower for marker in _LINKEDIN_ACTUAL_PAGE_MARKERS):
-    #         return URLValidationItem(
-    #             url=url, valid=False,
-    #             reason="generic linkedin page - unable to verify job status",
-    #         )
 
     return URLValidationItem(url=url, valid=True)
 
