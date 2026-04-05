@@ -27,6 +27,14 @@ _DIRECTORY_PATTERNS: dict[str, list[str]] = {
         "linkedin.com/jobs/search",
         "linkedin.com/jobs/?",
     ],
+    "event": [
+        "eventbrite.com/d/",
+        "meetup.com/find/",
+        "meetup.com/topics/",
+        "/search?",
+        "/search/?",
+        "lu.ma/discover",
+    ],
 }
 
 # URL patterns that a valid listing MUST match (if set for category)
@@ -97,6 +105,13 @@ _INVALID_PHRASES: dict[str, list[str]] = {
         "this event already took place",
         "registration has ended",
         "this event is no longer available",
+        "no events found",
+        "no results found",
+        "0 results",
+        "no upcoming events",
+        "there are no upcoming events",
+        "no events match",
+        "we couldn't find",
     ],
     "group": [
         "this community has been archived",
@@ -609,7 +624,7 @@ def _check_fetched_content(url: str, category: str, raw: Any) -> str:
     if status and (status < 200 or status > 299):
         return f"HTTP {status}"
 
-    if len(body) < _MIN_BODY_CHARS and category == "job":
+    if len(body) < _MIN_BODY_CHARS and category in ("job", "event"):
         return "insufficient content"
 
     body_lower = body.lower()

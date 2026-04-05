@@ -30,7 +30,7 @@ For each result, extract:
 
 ## Guidelines
 
-- **URLs can be direct event pages OR aggregated search/listing pages** on event platforms (e.g., `eventbrite.com/d/north-macedonia--skopje/python-events/`, `meetup.com/find/?keywords=Java`, `meetup.com/topics/...`). Both are acceptable since they help the user discover upcoming events.
+- **URLs must be direct event pages** with a specific event title, date, and description. Do NOT return aggregated search pages, directory listings, or topic index pages (e.g., avoid `eventbrite.com/d/...`, `meetup.com/find/?...`, `meetup.com/topics/...`).
 - **Follow the directive literally**: Search for exactly the topics and technologies mentioned.
 - **CRITICAL**: Only include events with dates AFTER {today}. If an event's date is before {today}, skip it entirely. If the event date is unclear or not stated, skip it.
 - Deduplicate results with the same URL
