@@ -29,7 +29,7 @@ class UserProfile(Base):
     industries: Mapped[str | None] = mapped_column(Text, nullable=True)
     locations: Mapped[str | None] = mapped_column(Text, nullable=True)
     work_arrangement: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    event_attendance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    event_attendance: Mapped[str | None] = mapped_column(String(20), nullable=True, default="no preference")
     event_topics: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Learning & Certification

@@ -16,7 +16,7 @@ class ProfileCreate(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = None
+    event_attendance: str | None = "no preference"
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -36,7 +36,7 @@ class ProfileUpdate(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = None
+    event_attendance: str | None = "no preference"
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -65,7 +65,7 @@ class ProfileRead(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = None
+    event_attendance: str | None = "no preference"
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -87,7 +87,7 @@ class ProfileExport(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = None
+    event_attendance: str | None = "no preference"
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
