@@ -11,6 +11,7 @@ export interface ProfileCreate {
   locations?: string[] | null
   work_arrangement?: string | null
   event_attendance?: string | null
+  event_topics?: string[] | null
   target_certifications?: string[] | null
   learning_format?: string | null
 }
@@ -26,6 +27,7 @@ export interface ProfileUpdate {
   locations?: string[] | null
   work_arrangement?: string | null
   event_attendance?: string | null
+  event_topics?: string[] | null
   target_certifications?: string[] | null
   learning_format?: string | null
 }
@@ -36,13 +38,14 @@ export interface Profile {
   targets: string[] | null
   constraints: string[] | null
   skills: string[] | null
-  cv_path: string | null
+  cv_filename: string | null
   preferred_titles: string[] | null
   experience_level: string | null
   industries: string[] | null
   locations: string[] | null
   work_arrangement: string | null
   event_attendance: string | null
+  event_topics: string[] | null
   target_certifications: string[] | null
   learning_format: string | null
   created_at: string

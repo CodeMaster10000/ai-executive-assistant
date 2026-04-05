@@ -16,12 +16,13 @@ async def _create_complete_profile(client, db_session, name="TestProfile"):
     )
     profile_id = profile_resp.json()["id"]
 
-    # Set targets, skills, and cv_path directly on the DB row
+    # Set targets, skills, and cv_data directly on the DB row
     profile = await db_session.get(UserProfile, profile_id)
     profile.targets = json.dumps(["software engineer"])
     profile.skills = json.dumps(["python", "fastapi"])
     profile.preferred_titles = json.dumps(["Software Engineer"])
-    profile.cv_path = "/fake/cv.pdf"
+    profile.cv_data = b"fake-pdf-content"
+    profile.cv_filename = "cv.pdf"
     await db_session.commit()
 
     return profile_id

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from pathlib import Path
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,17 +74,14 @@ async def resolve_job_opportunity(
     return job_opportunity, jd_text, job
 
 
-async def read_cv_content(cv_path: str | None, skills_fallback: str = "") -> str:
-    """Read CV content from a file path or fall back to skills."""
-    if cv_path:
+async def read_cv_content(cv_data: bytes | None, skills_fallback: str = "") -> str:
+    """Extract text from CV bytes (PDF) or fall back to skills."""
+    if cv_data:
         try:
-            path = Path(cv_path)
-            if path.suffix.lower() == ".pdf":
-                from app.services.profile_service import extract_text_from_pdf
+            from app.services.profile_service import extract_text_from_pdf
 
-                return await asyncio.to_thread(extract_text_from_pdf, cv_path)
-            return await asyncio.to_thread(path.read_text, "utf-8")
-        except (OSError, UnicodeDecodeError):
+            return await asyncio.to_thread(extract_text_from_pdf, cv_data)
+        except Exception:
             pass
     return skills_fallback
 
@@ -113,7 +108,7 @@ async def generate_cover_letter(
     run_id: str,
     profile_id: str,
     cover_letter_id: str,
-    cv_path: str | None,
+    cv_data: bytes | None,
     skills_fallback: str,
     jd_text: str,
     job_opportunity: dict,
@@ -139,7 +134,7 @@ async def generate_cover_letter(
         })
 
         # Read and summarize CV inside the background task (non-blocking)
-        raw_cv_content = await read_cv_content(cv_path, skills_fallback)
+        raw_cv_content = await read_cv_content(cv_data, skills_fallback)
 
         # Extract candidate name from raw CV before summarization loses it
         from app.agents.cover_letter_agent import _extract_name_from_cv
@@ -243,7 +238,7 @@ async def create_cover_letter(
     if profile is None:
         raise LookupError("Profile not found")
 
-    if not profile.cv_path:
+    if not profile.cv_data:
         raise ValueError("Profile is incomplete: please upload a CV before generating a cover letter")
 
     if not body.job_opportunity_id and not body.jd_text:
@@ -281,7 +276,7 @@ async def create_cover_letter(
             run_id=run.id,
             profile_id=profile_id,
             cover_letter_id=cl.id,
-            cv_path=profile.cv_path,
+            cv_data=profile.cv_data,
             skills_fallback=profile.skills or "",
             jd_text=jd_text,
             job_opportunity=job_opportunity,

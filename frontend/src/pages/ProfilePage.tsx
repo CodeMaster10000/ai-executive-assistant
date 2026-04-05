@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner"
 
 const EXPERIENCE_LEVELS = ["junior", "mid", "senior", "lead", "principal", "executive"]
-const WORK_ARRANGEMENTS = ["remote", "hybrid", "onsite", "flexible"]
+const WORK_ARRANGEMENTS = ["remote", "hybrid", "onsite"]
 const EVENT_ATTENDANCES = ["local", "remote", "no preference"]
 const LEARNING_FORMATS = ["online", "in-person", "self-paced", "instructor-led"]
 
@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [locations, setLocations] = useState<string[]>([])
   const [workArrangement, setWorkArrangement] = useState("")
   const [eventAttendance, setEventAttendance] = useState("")
+  const [eventTopics, setEventTopics] = useState<string[]>([])
   // Learning & Certification
   const [targetCertifications, setTargetCertifications] = useState<string[]>([])
   const [learningFormat, setLearningFormat] = useState("")
@@ -73,6 +74,7 @@ export default function ProfilePage() {
             setLocations(draft.locations ?? p.locations ?? [])
             setWorkArrangement(draft.work_arrangement ?? p.work_arrangement ?? "")
             setEventAttendance(draft.event_attendance ?? p.event_attendance ?? "")
+            setEventTopics(draft.event_topics ?? p.event_topics ?? [])
             setTargetCertifications(draft.target_certifications ?? p.target_certifications ?? [])
             setLearningFormat(draft.learning_format ?? p.learning_format ?? "")
             return
@@ -88,6 +90,7 @@ export default function ProfilePage() {
         setLocations(p.locations ?? [])
         setWorkArrangement(p.work_arrangement ?? "")
         setEventAttendance(p.event_attendance ?? "")
+        setEventTopics(p.event_topics ?? [])
         setTargetCertifications(p.target_certifications ?? [])
         setLearningFormat(p.learning_format ?? "")
       })
@@ -104,13 +107,13 @@ export default function ProfilePage() {
       name, targets, constraints, skills,
       preferred_titles: preferredTitles, experience_level: experienceLevel,
       industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
-      target_certifications: targetCertifications, learning_format: learningFormat,
+      event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
     }
     const saved = {
       name: profile.name, targets: profile.targets ?? [], constraints: profile.constraints ?? [], skills: profile.skills ?? [],
       preferred_titles: profile.preferred_titles ?? [], experience_level: profile.experience_level ?? "",
       industries: profile.industries ?? [], locations: profile.locations ?? [], work_arrangement: profile.work_arrangement ?? "", event_attendance: profile.event_attendance ?? "",
-      target_certifications: profile.target_certifications ?? [], learning_format: profile.learning_format ?? "",
+      event_topics: profile.event_topics ?? [], target_certifications: profile.target_certifications ?? [], learning_format: profile.learning_format ?? "",
     }
     const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
     dirtyRef.current = dirty
@@ -119,7 +122,7 @@ export default function ProfilePage() {
     } else {
       localStorage.removeItem(draftKey)
     }
-  }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, targetCertifications, learningFormat, profile])
+  }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, eventTopics, targetCertifications, learningFormat, profile])
 
   // Warn on navigation away with unsaved changes
   useEffect(() => {
@@ -131,7 +134,7 @@ export default function ProfilePage() {
   }, [profileId])
 
   function canSave() {
-    return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitles.length > 0 && !!profile?.cv_path
+    return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitles.length > 0 && !!profile?.cv_filename
   }
 
   async function handleSave() {
@@ -142,7 +145,7 @@ export default function ProfilePage() {
       if (targets.length === 0) missing.push("career goals")
       if (skills.length === 0) missing.push("skills")
       if (preferredTitles.length === 0) missing.push("preferred job titles")
-      if (!profile?.cv_path) missing.push("a CV")
+      if (!profile?.cv_filename) missing.push("a CV")
       toast.error(`Please add ${missing.join(", ")} before saving`)
       return
     }
@@ -154,6 +157,7 @@ export default function ProfilePage() {
       locations: locations.length > 0 ? locations : null,
       work_arrangement: workArrangement || null,
       event_attendance: eventAttendance || null,
+      event_topics: eventTopics.length > 0 ? eventTopics : null,
       target_certifications: targetCertifications.length > 0 ? targetCertifications : null,
       learning_format: learningFormat || null,
     }
@@ -317,9 +321,9 @@ export default function ProfilePage() {
             <CardTitle className="text-base">CV <span className="text-destructive">*</span></CardTitle>
           </CardHeader>
           <CardContent>
-            {profile.cv_path ? (
+            {profile.cv_filename ? (
               <p className="text-sm text-muted-foreground mb-2">
-                Uploaded: {profile.cv_path.split("/").pop()}
+                Uploaded: {profile.cv_filename}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground mb-2">No CV uploaded. Must be in PDF format.</p>
@@ -332,7 +336,7 @@ export default function ProfilePage() {
                 <Upload className="h-4 w-4" /> Upload CV
               </Label>
               <input id="cv-upload" type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
-              {profile.cv_path && (
+              {profile.cv_filename && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -402,6 +406,14 @@ export default function ProfilePage() {
           <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Events & Networking</h3>
         </div>
         <SelectCard label="Event Attendance" value={eventAttendance} onChange={setEventAttendance} options={EVENT_ATTENDANCES} optional description="How you prefer to attend events. This controls whether scouts search for in-person events near your locations, virtual events, or both." />
+        <TagCard
+          label="Event Topics"
+          items={eventTopics}
+          onChange={setEventTopics}
+          placeholder="e.g. Cloud computing workshops"
+          examples={["Software architecture conferences", "AI/ML meetups", "DevOps summits", "Leadership workshops"]}
+          optional
+        />
 
         {/* Learning & Certification section */}
         <div className="lg:col-span-2">

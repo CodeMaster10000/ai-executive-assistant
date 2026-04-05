@@ -23,6 +23,7 @@ class DailyState(TypedDict, total=False):
     locations: list[str]
     work_arrangement: str
     event_attendance: str
+    event_topics: list[str]
     target_certifications: list[str]
     learning_format: str
 
@@ -85,6 +86,7 @@ class WeeklyState(TypedDict, total=False):
     locations: list[str]
     work_arrangement: str
     event_attendance: str
+    event_topics: list[str]
     target_certifications: list[str]
     learning_format: str
 

@@ -17,6 +17,7 @@ class ProfileCreate(BaseModel):
     locations: list[str] | None = None
     work_arrangement: str | None = None
     event_attendance: str | None = None
+    event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
     learning_format: str | None = None
@@ -36,6 +37,7 @@ class ProfileUpdate(BaseModel):
     locations: list[str] | None = None
     work_arrangement: str | None = None
     event_attendance: str | None = None
+    event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
     learning_format: str | None = None
@@ -56,7 +58,7 @@ class ProfileRead(BaseModel):
     targets: list[str] | None = None
     constraints: list[str] | None = None
     skills: list[str] | None = None
-    cv_path: str | None = None
+    cv_filename: str | None = None
     # Career & Job
     preferred_titles: list[str] | None = None
     experience_level: str | None = None
@@ -64,6 +66,7 @@ class ProfileRead(BaseModel):
     locations: list[str] | None = None
     work_arrangement: str | None = None
     event_attendance: str | None = None
+    event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
     learning_format: str | None = None
@@ -85,6 +88,7 @@ class ProfileExport(BaseModel):
     locations: list[str] | None = None
     work_arrangement: str | None = None
     event_attendance: str | None = None
+    event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
     learning_format: str | None = None

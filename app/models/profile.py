@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Text, DateTime
+from sqlalchemy import LargeBinary, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -20,6 +20,8 @@ class UserProfile(Base):
     constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills: Mapped[str | None] = mapped_column(Text, nullable=True)
     cv_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cv_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    cv_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Career & Job
     preferred_titles: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -28,6 +30,7 @@ class UserProfile(Base):
     locations: Mapped[str | None] = mapped_column(Text, nullable=True)
     work_arrangement: Mapped[str | None] = mapped_column(String(20), nullable=True)
     event_attendance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    event_topics: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Learning & Certification
     target_certifications: Mapped[str | None] = mapped_column(Text, nullable=True)

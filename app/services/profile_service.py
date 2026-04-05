@@ -1,9 +1,9 @@
 """Profile business logic: CRUD, CV upload, skill extraction."""
 
 import asyncio
+import io
 import json
 import logging
-import os
 import shutil
 from pathlib import Path
 
@@ -56,13 +56,14 @@ def profile_to_read(profile: UserProfile) -> ProfileRead:
         targets=_deserialize_list(profile.targets),
         constraints=_deserialize_list(profile.constraints),
         skills=_deserialize_list(profile.skills),
-        cv_path=profile.cv_path,
+        cv_filename=profile.cv_filename,
         preferred_titles=_deserialize_list(profile.preferred_titles),
         experience_level=profile.experience_level,
         industries=_deserialize_list(profile.industries),
         locations=_deserialize_list(profile.locations),
         work_arrangement=profile.work_arrangement,
         event_attendance=profile.event_attendance,
+        event_topics=_deserialize_list(profile.event_topics),
         target_certifications=_deserialize_list(profile.target_certifications),
         learning_format=profile.learning_format,
         created_at=profile.created_at,
@@ -83,6 +84,7 @@ async def create_profile(db: AsyncSession, body: ProfileCreate) -> ProfileRead:
         locations=_serialize_list(body.locations),
         work_arrangement=body.work_arrangement,
         event_attendance=body.event_attendance,
+        event_topics=_serialize_list(body.event_topics),
         target_certifications=_serialize_list(body.target_certifications),
         learning_format=body.learning_format,
     )
@@ -116,7 +118,7 @@ async def update_profile(
         return None
 
     update_data = body.model_dump(exclude_unset=True)
-    for field in ("targets", "constraints", "skills", "preferred_titles", "industries", "locations", "target_certifications"):
+    for field in ("targets", "constraints", "skills", "preferred_titles", "industries", "locations", "event_topics", "target_certifications"):
         if field in update_data:
             update_data[field] = _serialize_list(update_data[field])
 
@@ -153,9 +155,6 @@ async def delete_profile(db: AsyncSession, profile_id: str) -> bool:
 
     # Clean up filesystem artifacts (run in thread to avoid blocking event loop)
     def _cleanup() -> None:
-        cv_dir = settings.artifacts_dir / "cvs" / profile_id
-        if cv_dir.exists():
-            shutil.rmtree(cv_dir, ignore_errors=True)
         for rid in run_ids:
             run_dir = settings.artifacts_dir / "runs" / rid
             if run_dir.exists():
@@ -168,26 +167,24 @@ async def delete_profile(db: AsyncSession, profile_id: str) -> bool:
 async def upload_cv(
     db: AsyncSession, profile_id: str, filename: str, content: bytes
 ) -> ProfileRead | None:
-    """Save CV file and update profile. Returns None if profile not found."""
+    """Store CV bytes in the database. Returns None if profile not found."""
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
         return None
 
-    cv_dir = settings.artifacts_dir / "cvs" / profile_id
-    os.makedirs(cv_dir, exist_ok=True)
-
-    file_path = cv_dir / filename
-    await asyncio.to_thread(Path(file_path).write_bytes, content)
-
-    profile.cv_path = str(file_path)
+    profile.cv_data = content
+    profile.cv_filename = filename
     await db.commit()
     await db.refresh(profile)
     return profile_to_read(profile)
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    """Extract text content from a PDF file."""
-    reader = PdfReader(file_path)
+def extract_text_from_pdf(source: str | bytes) -> str:
+    """Extract text content from a PDF file path or bytes."""
+    if isinstance(source, bytes):
+        reader = PdfReader(io.BytesIO(source))
+    else:
+        reader = PdfReader(source)
     text_parts = []
     for page in reader.pages:
         text = page.extract_text()
@@ -212,6 +209,7 @@ async def export_profile(db: AsyncSession, profile_id: str) -> dict | None:
         "locations": _deserialize_list(profile.locations),
         "work_arrangement": profile.work_arrangement,
         "event_attendance": profile.event_attendance,
+        "event_topics": _deserialize_list(profile.event_topics),
         "target_certifications": _deserialize_list(profile.target_certifications),
         "learning_format": profile.learning_format,
     }
@@ -231,6 +229,7 @@ async def import_profile(db: AsyncSession, data: dict) -> ProfileRead:
         locations=data.get("locations"),
         work_arrangement=data.get("work_arrangement"),
         event_attendance=data.get("event_attendance"),
+        event_topics=data.get("event_topics"),
         target_certifications=data.get("target_certifications"),
         learning_format=data.get("learning_format"),
     )
@@ -269,17 +268,13 @@ async def extract_skills_from_cv(
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
         raise LookupError("Profile not found")
-    if not profile.cv_path:
+    if not profile.cv_data:
         raise ValueError("No CV uploaded for this profile")
 
-    cv_path = profile.cv_path
-    if not Path(cv_path).exists():
-        raise ValueError("CV file not found on disk")
-
     try:
-        cv_text = extract_text_from_pdf(cv_path)
+        cv_text = extract_text_from_pdf(profile.cv_data)
     except Exception:
-        logger.exception("Failed to extract text from CV: %s", cv_path)
+        logger.exception("Failed to extract text from CV for profile %s", profile_id)
         raise ValueError("Failed to read CV file")
 
     if not cv_text.strip():
