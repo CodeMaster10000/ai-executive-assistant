@@ -387,7 +387,7 @@ class WebScraperAgent(LLMAgent):
                 if self._prompt_loader
                 else "You are a helpful web search agent."
             )
-            user_content = f"Search for: {prompt}"
+            user_content = prompt
 
             search_context = ""
             usages: list[dict] = []
