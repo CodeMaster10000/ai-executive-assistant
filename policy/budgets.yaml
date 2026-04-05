@@ -11,14 +11,14 @@ agents:
     type: llm
   web_scraper_job_daily:
     max_steps: 15
-    min_searches: 10
+    min_searches: 20
     min_results: 4
     max_input_tokens: 200000
     max_output_tokens: 100000
     type: llm
   web_scraper_job_weekly:
     max_steps: 15
-    min_searches: 10
+    min_searches: 20
     min_results: 8
     max_input_tokens: 200000
     max_output_tokens: 100000
