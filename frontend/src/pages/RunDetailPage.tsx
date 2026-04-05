@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { RefreshCw, Ban, GitCompare, Eye, Check, AlertTriangle, X, ChevronRight, Copy } from "lucide-react"
+import { RefreshCw, Ban, GitCompare, Eye, Check, AlertTriangle, X, ChevronRight, Copy, Code } from "lucide-react"
 import { getRun, cancelRun } from "@/api/runs"
 import { getAudit, replay } from "@/api/audit"
 import { listJobs, listCertifications, listCourses, listEvents, listGroups, listTrends } from "@/api/results"
@@ -411,8 +411,73 @@ function PipelineStepper({ agents, statuses }: { agents: string[]; statuses: Rec
   )
 }
 
+function PrettyEventData({ data }: { data: Record<string, unknown> }) {
+  const renderValue = (_key: string, value: unknown) => {
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-muted-foreground">empty</span>
+      // Array of objects (e.g. filtered URLs, results)
+      if (typeof value[0] === "object" && value[0] !== null) {
+        return (
+          <div className="space-y-1.5 mt-1">
+            {value.map((item, j) => (
+              <div key={j} className="bg-background rounded px-2.5 py-1.5 text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
+                {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
+                  <span key={k}>
+                    <span className="text-muted-foreground">{k}: </span>
+                    {k === "url" || k === "link" ? (
+                      <a href={String(v)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                        {String(v)}
+                      </a>
+                    ) : (
+                      <span className="font-medium">{String(v)}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      }
+      // Array of scalars
+      return <span className="font-medium">{value.join(", ")}</span>
+    }
+    if (typeof value === "object" && value !== null) {
+      return (
+        <div className="ml-3 mt-1 space-y-1">
+          {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
+            <div key={k} className="text-xs">
+              <span className="text-muted-foreground">{k}: </span>
+              <span className="font-medium">{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return <span className="font-medium">{String(value)}</span>
+  }
+
+  const totalFiltered = typeof data.total_filtered === "number" ? data.total_filtered : null
+
+  return (
+    <div className="bg-muted rounded p-3 text-xs space-y-3 max-h-80 overflow-y-auto">
+      {totalFiltered !== null && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">{totalFiltered} filtered</Badge>
+        </div>
+      )}
+      {Object.entries(data).filter(([k]) => k !== "total_filtered").map(([key, value]) => (
+        <div key={key}>
+          <p className="font-semibold text-foreground mb-0.5">{key} {Array.isArray(value) ? `(${value.length})` : ""}</p>
+          {renderValue(key, value)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AuditTimeline({ events }: { events: AuditEvent[] }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [jsonMode, setJsonMode] = useState<Set<number>>(new Set())
 
   if (events.length === 0) {
     return <p className="text-sm text-muted-foreground py-4">No audit events recorded.</p>
@@ -434,11 +499,19 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
       return next
     })
 
+  const toggleJson = (i: number) =>
+    setJsonMode((prev) => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+
   return (
     <div className="relative ml-4 border-l pl-6 space-y-4 py-4">
       {events.map((e, i) => {
         const hasData = e.data && Object.keys(e.data).length > 0
         const isOpen = expanded.has(i)
+        const isJson = jsonMode.has(i)
         return (
           <div key={i} className="relative">
             <span
@@ -461,19 +534,33 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
             )}
             {hasData && isOpen && (
               <div className="relative mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(e.data, null, 2))
-                    toast.success("Copied to clipboard")
-                  }}
-                  className="absolute top-2 right-2 p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-                <pre className="bg-muted rounded p-2 pr-8 text-xs font-mono overflow-x-auto max-h-80 overflow-y-auto">
-                  {JSON.stringify(e.data, null, 2)}
-                </pre>
+                <div className="absolute top-2 right-2 flex gap-1 z-10">
+                  <button
+                    type="button"
+                    onClick={() => toggleJson(i)}
+                    title={isJson ? "Pretty view" : "JSON view"}
+                    className={`p-1 rounded cursor-pointer ${isJson ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {isJson ? <Eye className="h-3.5 w-3.5" /> : <Code className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(e.data, null, 2))
+                      toast.success("Copied to clipboard")
+                    }}
+                    className="p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {isJson ? (
+                  <pre className="bg-muted rounded p-2 pr-16 text-xs font-mono overflow-x-auto max-h-80 overflow-y-auto">
+                    {JSON.stringify(e.data, null, 2)}
+                  </pre>
+                ) : (
+                  <PrettyEventData data={e.data as Record<string, unknown>} />
+                )}
               </div>
             )}
           </div>
