@@ -396,3 +396,75 @@ def make_fan_out_node(
         return merged
 
     return _node
+
+
+# ------------------------------------------------------------------
+# make_url_filter_report_node: static stage that surfaces rejected URLs
+# ------------------------------------------------------------------
+
+_FILTER_CATEGORIES = ("job", "cert", "course", "event", "group", "trend")
+
+
+def make_url_filter_report_node(
+    pipeline: str,
+    audit_writer: AuditWriter | None = None,
+    event_manager: Any | None = None,
+) -> Callable[..., Any]:
+    """Create a static node that reads filtered URLs from state and writes
+    them as a dedicated audit event, making rejections visible in the stepper."""
+
+    async def _node(state: dict[str, Any]) -> dict[str, Any]:
+        run_id = state.get("run_id", "unknown")
+        now = datetime.now(timezone.utc).isoformat
+        node_name = "url_filter_report"
+
+        await _publish_sse(event_manager, run_id, {
+            "type": "static_validator_started",
+            "agent": node_name,
+            "timestamp": now(),
+        })
+
+        node_start(pipeline, state, node_name)
+        t0 = time.monotonic()
+
+        if audit_writer:
+            await audit_writer.append(run_id, AuditEvent(
+                timestamp=now(),
+                event_type="static_validator_start",
+                agent=node_name,
+                node_type="static_validator",
+            ))
+
+        # Collect filtered URLs from state
+        report: dict[str, Any] = {}
+        total = 0
+        for cat in _FILTER_CATEGORIES:
+            filtered = state.get(f"filtered_{cat}_urls", [])
+            if filtered:
+                report[cat] = filtered
+                total += len(filtered)
+        report["total_filtered"] = total
+
+        elapsed = time.monotonic() - t0
+        node_end(pipeline, state, node_name, elapsed, total_filtered=total)
+
+        if audit_writer:
+            await audit_writer.append(run_id, AuditEvent(
+                timestamp=now(),
+                event_type="static_validator_end",
+                agent=node_name,
+                node_type="static_validator",
+                data=report,
+            ))
+
+        await _publish_sse(event_manager, run_id, {
+            "type": "static_validator_completed",
+            "agent": node_name,
+            "verification_status": "pass",
+            "elapsed": round(elapsed, 2),
+            "timestamp": now(),
+        })
+
+        return {}
+
+    return _node

@@ -16,14 +16,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 
 const AGENTS_BY_MODE: Record<string, string[]> = {
-  daily: ["goal_extractor", "web_scrapers", "data_formatter", "audit_writer"],
-  weekly: ["goal_extractor", "web_scrapers", "data_formatter", "ceo", "cfo", "audit_writer"],
+  daily: ["goal_extractor", "web_scrapers", "url_filter_report", "data_formatter", "audit_writer"],
+  weekly: ["goal_extractor", "web_scrapers", "url_filter_report", "data_formatter", "ceo", "cfo", "audit_writer"],
   cover_letter: ["cover_letter_agent", "audit_writer"],
 }
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
   goal_extractor: "Goal Extractor",
   web_scrapers: "Web Scraper",
+  url_filter_report: "Filter Report",
   data_formatter: "Data Formatter",
   audit_writer: "Audit Writer",
   ceo: "CEO",
@@ -47,7 +48,13 @@ const AGENT_FUN_MESSAGES: Record<string, string[]> = {
     "Teaching robots to read job postings... they learn fast",
     "Crawling the web so you don't have to...",
     "Scouring every corner of the internet (legally)...",
+    "Validating results... good things take time",
+    "Double-checking every link so you don't have to...",
     "The bots are caffeinated and ready to go...",
+  ],
+  url_filter_report: [
+    "Sorting the good links from the bad...",
+    "Quality control in progress...",
   ],
   data_formatter: [
     "Sorting through the treasure trove...",
