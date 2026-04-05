@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react"
-import { useParams, useSearchParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import {
   Briefcase, GraduationCap, BookOpen, Calendar, Users, TrendingUp,
-  Search, Pencil, Trash2, Check, X, Target, ShieldAlert,
+  Search, Pencil, Trash2, Check, X, Target, ShieldAlert, FileEdit,
 } from "lucide-react"
 import {
   listJobs, listCertifications, listCourses, listEvents, listGroups, listTrends,
   updateResult, deleteResult, getInsights,
 } from "@/api/results"
+import { dedup } from "@/lib/dedup"
 import { listRuns } from "@/api/runs"
 import type { JobOpportunity, Certification, Course, Event, Group, Trend, Run, ExecutiveInsights } from "@/api/types"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -34,24 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-function dedup<T extends { created_at: string }>(
-  items: T[],
-  keyFn: (item: T) => string,
-): T[] {
-  const map = new Map<string, T>()
-  for (const item of items) {
-    const key = keyFn(item)
-    const existing = map.get(key)
-    if (!existing || item.created_at > existing.created_at) {
-      map.set(key, item)
-    }
-  }
-  return [...map.values()]
-}
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function OpportunitiesPage() {
   const { profileId } = useParams()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const runId = searchParams.get("run_id") ?? undefined
   const [jobs, setJobs] = useState<JobOpportunity[]>([])
@@ -264,6 +252,9 @@ export default function OpportunitiesPage() {
                     await deleteResult(profileId!, "jobs", id, true)
                     setJobs((prev) => prev.filter((x) => x.id !== id))
                   }}
+                  onGenerateCoverLetter={(id) => {
+                    navigate(`/profiles/${profileId}/cover-letters?job_id=${id}`)
+                  }}
                 />
               )}
             />
@@ -441,6 +432,7 @@ function ResultCard({
   relevance,
   onDelete,
   onForceDelete,
+  onGenerateCoverLetter,
 }: {
   id: string
   icon: React.ReactNode
@@ -453,6 +445,7 @@ function ResultCard({
   onEdit?: (id: string, newTitle: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onForceDelete?: (id: string) => Promise<void>
+  onGenerateCoverLetter?: (id: string) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(title)
@@ -538,8 +531,21 @@ function ResultCard({
                 <CardTitle className="text-base leading-snug">{title}</CardTitle>
               )}
             </div>
-            {!editing && (onEdit || onDelete) && (
+            {!editing && (onEdit || onDelete || onGenerateCoverLetter) && (
               <div className="flex gap-1 shrink-0">
+                {onGenerateCoverLetter && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => onGenerateCoverLetter(id)}
+                        className="text-muted-foreground hover:text-primary p-0.5"
+                      >
+                        <FileEdit className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Generate cover letter</TooltipContent>
+                  </Tooltip>
+                )}
                 {onEdit && (
                   <button
                     onClick={() => {

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { FileEdit, Plus, Loader2, ExternalLink, Trash2, Copy } from "lucide-react"
 import { listCoverLetters, createCoverLetter, deleteCoverLetter } from "@/api/coverLetters"
 import { listJobs } from "@/api/results"
+import { dedup } from "@/lib/dedup"
 import type { CoverLetter, JobOpportunity } from "@/api/types"
 import { useSSE } from "@/hooks/useSSE"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -42,6 +43,7 @@ import { toast } from "sonner"
 
 export default function CoverLettersPage() {
   const { profileId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [letters, setLetters] = useState<CoverLetter[]>([])
   const [jobs, setJobs] = useState<JobOpportunity[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,12 +64,23 @@ export default function CoverLettersPage() {
     Promise.all([listCoverLetters(profileId), listJobs(profileId)])
       .then(([cl, j]) => {
         setLetters(cl)
-        setJobs(j)
+        setJobs(dedup(j, (x) => `${x.title}|${x.company ?? ""}`))
       })
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [profileId])
+
+  // Auto-open dialog when navigated with ?job_id= from Results page
+  useEffect(() => {
+    const jobId = searchParams.get("job_id")
+    if (!jobId || jobs.length === 0) return
+    if (jobs.some((j) => j.id === jobId)) {
+      setSelectedJob(jobId)
+      setDialogOpen(true)
+    }
+    setSearchParams((prev) => { prev.delete("job_id"); return prev }, { replace: true })
+  }, [jobs, searchParams])
 
   // Reload when SSE signals generation complete
   useEffect(() => {
@@ -188,7 +201,7 @@ export default function CoverLettersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="mb-2 block">Or paste job description (optional)</Label>
+                  <Label className="mb-2 block">Or paste job description (recommended)</Label>
                   <Textarea
                     value={jdText}
                     onChange={(e) => setJdText(e.target.value)}

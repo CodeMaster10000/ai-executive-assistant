@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import DashboardPage from "@/pages/DashboardPage"
 import ProfilePage from "@/pages/ProfilePage"
 import RunsListPage from "@/pages/RunsListPage"
@@ -14,6 +15,7 @@ import NotFoundPage from "@/pages/NotFoundPage"
 export default function App() {
   return (
     <ErrorBoundary>
+      <TooltipProvider delayDuration={0}>
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
@@ -29,6 +31,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </TooltipProvider>
     </ErrorBoundary>
   )
 }
