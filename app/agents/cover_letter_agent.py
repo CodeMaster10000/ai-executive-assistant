@@ -52,7 +52,7 @@ def _extract_name_from_cv(cv_text: str) -> str | None:
         # A name is typically 2-4 short words, all alphabetic
         words = line.split()
         if 2 <= len(words) <= 4 and all(w.isalpha() for w in words):
-            return line
+            return line.title()
         # If the first non-empty, non-header line isn't a name, stop looking
         break
     return None
