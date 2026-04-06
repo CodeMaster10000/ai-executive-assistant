@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api import profiles, runs, audit, results, cover_letters, policies, auth, admin
+from app.api import profiles, runs, audit, results, cover_letters, policies, auth, admin, settings as user_settings
 from app.auth.rate_limit import limiter
 from app.config import settings as _settings
 from app.db import engine, Base
@@ -90,12 +90,12 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
+_cors_origins = ["http://localhost:5173", _settings.app_base_url]
+if _settings.cors_origins:
+    _cors_origins.extend(o.strip() for o in _settings.cors_origins.split(",") if o.strip())
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        _settings.app_base_url,
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -118,6 +118,7 @@ app.include_router(audit.router, prefix="/api")
 app.include_router(results.router, prefix="/api")
 app.include_router(cover_letters.router, prefix="/api")
 app.include_router(policies.router, prefix="/api")
+app.include_router(user_settings.router, prefix="/api")
 
 
 # SPA catch-all: serve static files if they exist, otherwise index.html

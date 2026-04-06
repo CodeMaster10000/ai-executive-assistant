@@ -35,23 +35,27 @@ async def list_all_runs(
     "/profiles/{profile_id}/runs",
     status_code=201,
     responses={
+        402: {"description": "API key required"},
         404: {"description": "Profile not found"},
         422: {"description": "Profile is incomplete"},
     },
 )
 async def create_run(
     _profile: VerifiedProfile,
+    user: CurrentUser,
     profile_id: str,
     body: RunCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RunRead:
     """Create a new run and launch the pipeline in the background."""
     try:
-        return await run_service.create_run(db, profile_id, body)
+        return await run_service.create_run(db, profile_id, body, user)
     except LookupError:
         raise HTTPException(status_code=404, detail="Profile not found")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        detail = str(exc)
+        status = 402 if "API key" in detail or "Free trial" in detail else 422
+        raise HTTPException(status_code=status, detail=detail)
 
 
 @router.get("/profiles/{profile_id}/runs")

@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     search_max_results: int = 10
     search_fetch_top_n: int = 5
 
+    # BYOK (Bring Your Own Key)
+    api_key_encryption_secret: str = "change-me-to-a-long-random-string-for-encryption"
+    free_run_limit: int = 1
+
     # Auth
     jwt_secret: str = "change-me-to-a-long-random-string"
     jwt_access_expiry_minutes: int = 30
@@ -78,6 +82,7 @@ class Settings(BaseSettings):
 
     # App
     app_base_url: str = "http://localhost:8000"
+    cors_origins: str = ""  # comma-separated extra origins, e.g. "https://myapp.onrender.com,https://custom.domain"
     admin_email: str = ""
 
     model_config = {

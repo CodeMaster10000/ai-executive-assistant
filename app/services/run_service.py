@@ -34,15 +34,15 @@ from app.models.job_opportunity import JobOpportunity
 from app.models.trend import Trend
 from app.models.profile import UserProfile
 from app.models.run import Run
+from app.models.user import User
 from app.schemas.run import RunCreate, RunRead
+from app.services.api_key_service import resolve_api_key
 from app.sse import event_manager
 
 logger = logging.getLogger(__name__)
 
 # In-memory store for background tasks (for cancellation)
 _running_tasks: dict[str, asyncio.Task] = {}
-
-_agent_factory: Any = None
 
 
 def run_to_read(run: Run) -> RunRead:
@@ -59,14 +59,8 @@ def run_to_read(run: Run) -> RunRead:
     )
 
 
-
-
-def get_agent_factory() -> Any:
-    """Return a shared AgentFactory singleton, created on the first call."""
-    global _agent_factory
-    if _agent_factory is not None:
-        return _agent_factory
-
+def create_agent_factory(api_key: str) -> AgentFactory:
+    """Create a fresh AgentFactory using the given API key."""
     prompt_loader = PromptLoader(settings.prompts_dir)
 
     agent_models = AgentModelConfig(
@@ -78,13 +72,10 @@ def get_agent_factory() -> Any:
         cover_letter=settings.cover_letter_model,
     )
 
-    if not settings.api_key:
-        raise RuntimeError("API_KEY is required. Set it in your .env file.")
-
     llm = ChatOpenAI(
         model=settings.llm_model,
         temperature=settings.llm_temperature,
-        api_key=settings.api_key,
+        api_key=api_key,
     )
 
     search_tool = None
@@ -94,14 +85,13 @@ def get_agent_factory() -> Any:
         logger.warning("duckduckgo-search not installed, web scraper search tool unavailable")
 
     policy_engine = PolicyEngine(settings.policy_dir)
-    _agent_factory = AgentFactory(
+    return AgentFactory(
         llm=llm,
         prompt_loader=prompt_loader,
         search_tool=search_tool,
         policy_engine=policy_engine,
         agent_models=agent_models,
     )
-    return _agent_factory
 
 
 def _parse_profile_targets(profile: UserProfile | None) -> list[str]:
@@ -329,7 +319,7 @@ async def persist_results(
         await session.commit()
 
 
-async def execute_run(run_id: str, profile_id: str, mode: str) -> None:
+async def execute_run(run_id: str, profile_id: str, mode: str, api_key: str) -> None:
     """Background task that executes the LangGraph pipeline."""
     try:
         if not await _start_run(run_id):
@@ -367,7 +357,7 @@ async def execute_run(run_id: str, profile_id: str, mode: str) -> None:
 
         token_tracker = RunTokenTracker(run_id)
 
-        agent_factory = get_agent_factory()
+        agent_factory = create_agent_factory(api_key)
         graph = _build_graph(
             mode, policy_engine, audit_writer, agent_factory,
             verifier=verifier, run_event_manager=event_manager,
@@ -475,15 +465,20 @@ async def list_all_runs(
 
 
 async def create_run(
-    db: AsyncSession, profile_id: str, body: RunCreate
+    db: AsyncSession, profile_id: str, body: RunCreate, user: User
 ) -> RunRead:
     """Create a run record and launch the pipeline in the background.
 
     Raises LookupError if the profile does not exist.
+    Raises ValueError if the profile is incomplete or the user needs an API key.
     """
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
         raise LookupError("Profile not found")
+
+    # Resolve API key (may raise ValueError if free trial exhausted)
+    api_key = resolve_api_key(user)
+    using_free_trial = not user.encrypted_api_key and user.role != "admin"
 
     # Validate profile completeness
     missing: list[str] = []
@@ -501,6 +496,10 @@ async def create_run(
     if missing:
         raise ValueError(f"Profile is incomplete: please add {', '.join(missing)}")
 
+    # Increment free run counter if using the app's trial key
+    if using_free_trial:
+        user.free_runs_used += 1
+
     run = Run(
         profile_id=profile_id,
         mode=body.mode,
@@ -511,7 +510,7 @@ async def create_run(
     await db.refresh(run)
 
     task = asyncio.create_task(
-        execute_run(run.id, profile_id, body.mode)
+        execute_run(run.id, profile_id, body.mode, api_key)
     )
     _running_tasks[run.id] = task
 

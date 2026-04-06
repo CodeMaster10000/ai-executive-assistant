@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import VerifiedProfile
+from app.auth.dependencies import CurrentUser, VerifiedProfile
 from app.db import get_db
 from app.schemas.cover_letter import CoverLetterCreate, CoverLetterRead
 from app.services import cover_letter_service
@@ -19,23 +19,27 @@ router = APIRouter(tags=["cover-letters"])
     "/profiles/{profile_id}/cover-letters",
     status_code=201,
     responses={
+        402: {"description": "API key required"},
         404: {"description": "Profile or job opportunity not found"},
         422: {"description": "Either job_opportunity_id or jd_text must be provided"},
     },
 )
 async def create_cover_letter(
     _profile: VerifiedProfile,
+    user: CurrentUser,
     profile_id: str,
     body: CoverLetterCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CoverLetterRead:
     """Generate a cover letter from a job opportunity or raw JD text."""
     try:
-        return await cover_letter_service.create_cover_letter(db, profile_id, body)
+        return await cover_letter_service.create_cover_letter(db, profile_id, body, user)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        detail = str(exc)
+        status = 402 if "API key" in detail or "Free trial" in detail else 422
+        raise HTTPException(status_code=status, detail=detail)
 
 
 @router.get("/profiles/{profile_id}/cover-letters")

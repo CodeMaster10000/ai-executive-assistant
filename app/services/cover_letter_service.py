@@ -17,11 +17,13 @@ from app.models.job_opportunity import JobOpportunity
 from app.models.profile import UserProfile
 from app.models.run import Run
 from app.schemas.cover_letter import CoverLetterCreate, CoverLetterRead
+from app.models.user import User
+from app.services.api_key_service import resolve_api_key
 from app.services.run_service import (
     _parse_profile_constraints,
     _parse_profile_skills,
     _parse_profile_targets,
-    get_agent_factory,
+    create_agent_factory,
 )
 from app.sse import event_manager
 
@@ -86,11 +88,11 @@ async def read_cv_content(cv_data: bytes | None, skills_fallback: str = "") -> s
     return skills_fallback
 
 
-async def summarize_cv(raw_cv_content: str) -> str:
+async def summarize_cv(raw_cv_content: str, api_key: str) -> str:
     """Summarize CV content using LLM if available, otherwise return raw."""
     if not raw_cv_content:
         return raw_cv_content
-    factory = get_agent_factory()
+    factory = create_agent_factory(api_key)
     from app.llm.prompt_loader import PromptLoader
 
     prompt_loader = PromptLoader(settings.prompts_dir)
@@ -111,6 +113,7 @@ async def generate_cover_letter(
     jd_text: str,
     job_opportunity: dict,
     job_opportunity_id: str | None,
+    api_key: str,
     profile_name: str = "",
     profile_targets: list[str] | None = None,
     profile_skills: list[str] | None = None,
@@ -171,7 +174,7 @@ async def generate_cover_letter(
         graph = build_cover_letter_graph(
             policy_engine=policy_engine,
             audit_writer=audit_writer,
-            agent_factory=get_agent_factory(),
+            agent_factory=create_agent_factory(api_key),
             verifier=verifier,
             event_manager=event_manager,
         )
@@ -233,7 +236,7 @@ async def generate_cover_letter(
 
 
 async def create_cover_letter(
-    db: AsyncSession, profile_id: str, body: CoverLetterCreate
+    db: AsyncSession, profile_id: str, body: CoverLetterCreate, user: User
 ) -> CoverLetterRead:
     """Create a cover letter and launch background generation.
 
@@ -242,6 +245,10 @@ async def create_cover_letter(
     profile = await db.get(UserProfile, profile_id)
     if profile is None:
         raise LookupError("Profile not found")
+
+    # Resolve API key (may raise ValueError if free trial exhausted)
+    api_key = resolve_api_key(user)
+    using_free_trial = not user.encrypted_api_key and user.role != "admin"
 
     if not profile.cv_data:
         raise ValueError("Profile is incomplete: please upload a CV before generating a cover letter")
@@ -257,6 +264,10 @@ async def create_cover_letter(
     targets = _parse_profile_targets(profile)
     skills = _parse_profile_skills(profile)
     constraints = _parse_profile_constraints(profile)
+
+    # Increment free run counter if using the app's trial key
+    if using_free_trial:
+        user.free_runs_used += 1
 
     # Create a run record
     run = Run(profile_id=profile_id, mode="cover_letter", status="pending")
@@ -284,6 +295,7 @@ async def create_cover_letter(
             jd_text=jd_text,
             job_opportunity=job_opportunity,
             job_opportunity_id=body.job_opportunity_id,
+            api_key=api_key,
             profile_name=profile.name,
             profile_targets=targets,
             profile_skills=skills,

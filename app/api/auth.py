@@ -20,6 +20,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserRead,
     VerifyEmailRequest,
+    user_to_read,
 )
 from app.services import auth_service
 
@@ -42,7 +43,7 @@ async def register(
     return TokenResponse(
         access_token=access,
         refresh_token=refresh,
-        user=UserRead.model_validate(user),
+        user=user_to_read(user),
     )
 
 
@@ -60,7 +61,7 @@ async def login(
     return TokenResponse(
         access_token=access,
         refresh_token=refresh,
-        user=UserRead.model_validate(user),
+        user=user_to_read(user),
     )
 
 
@@ -89,7 +90,7 @@ async def logout(
 
 @router.get("/me", response_model=UserRead)
 async def get_me(user: CurrentUser):
-    return UserRead.model_validate(user)
+    return user_to_read(user)
 
 
 @router.get("/google")
