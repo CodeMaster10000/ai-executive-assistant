@@ -55,6 +55,23 @@ export default function ProfilePage() {
 
   const draftKey = profileId ? `profile-draft-${profileId}` : null
 
+  // Refs that always hold the latest values so the unmount cleanup can save reliably
+  const profileRef = useRef<Profile | null>(null)
+  const formRef = useRef({
+    name, targets, constraints, skills,
+    preferred_titles: preferredTitles, experience_level: experienceLevel,
+    industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
+    event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
+  })
+  // Update refs synchronously every render (before any effects/cleanup)
+  formRef.current = {
+    name, targets, constraints, skills,
+    preferred_titles: preferredTitles, experience_level: experienceLevel,
+    industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
+    event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
+  }
+  profileRef.current = profile
+
   const load = useCallback(() => {
     if (!profileId || !draftKey) return
     getProfile(profileId)
@@ -99,22 +116,23 @@ export default function ProfilePage() {
 
   useEffect(() => { load() }, [load])
 
+  // Build the "saved" snapshot for dirty-checking against the server profile
+  function buildSaved(p: Profile) {
+    return {
+      name: p.name, targets: p.targets ?? [], constraints: p.constraints ?? [], skills: p.skills ?? [],
+      preferred_titles: p.preferred_titles ?? [], experience_level: p.experience_level ?? "",
+      industries: p.industries ?? [], locations: p.locations ?? [], work_arrangement: p.work_arrangement ?? "",
+      event_attendance: p.event_attendance ?? "no preference",
+      event_topics: p.event_topics ?? [], target_certifications: p.target_certifications ?? [], learning_format: p.learning_format ?? "",
+    }
+  }
+
   // Persist draft to localStorage on changes
   const dirtyRef = useRef(false)
   useEffect(() => {
     if (!draftKey || !profile) return
-    const draft = {
-      name, targets, constraints, skills,
-      preferred_titles: preferredTitles, experience_level: experienceLevel,
-      industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
-      event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
-    }
-    const saved = {
-      name: profile.name, targets: profile.targets ?? [], constraints: profile.constraints ?? [], skills: profile.skills ?? [],
-      preferred_titles: profile.preferred_titles ?? [], experience_level: profile.experience_level ?? "",
-      industries: profile.industries ?? [], locations: profile.locations ?? [], work_arrangement: profile.work_arrangement ?? "", event_attendance: profile.event_attendance ?? "",
-      event_topics: profile.event_topics ?? [], target_certifications: profile.target_certifications ?? [], learning_format: profile.learning_format ?? "",
-    }
+    const draft = formRef.current
+    const saved = buildSaved(profile)
     const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
     dirtyRef.current = dirty
     if (dirty) {
@@ -124,14 +142,20 @@ export default function ProfilePage() {
     }
   }, [draftKey, name, targets, constraints, skills, preferredTitles, experienceLevel, industries, locations, workArrangement, eventAttendance, eventTopics, targetCertifications, learningFormat, profile])
 
-  // Warn on navigation away with unsaved changes
+  // Save draft on unmount so fast navigation doesn't lose changes
   useEffect(() => {
     return () => {
-      if (dirtyRef.current) {
+      const p = profileRef.current
+      if (!draftKey || !p) return
+      const draft = formRef.current
+      const saved = buildSaved(p)
+      const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
+      if (dirty) {
+        localStorage.setItem(draftKey, JSON.stringify(draft))
         toast.warning("You have unsaved profile changes. Your draft has been saved.")
       }
     }
-  }, [profileId])
+  }, [draftKey])
 
   function canSave() {
     return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitles.length > 0 && !!profile?.cv_filename
