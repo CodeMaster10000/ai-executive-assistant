@@ -14,13 +14,15 @@
 
 You define a career profile (your skills, targets, constraints, and CV). Stratoseer dispatches a network of specialized AI agents that:
 
-1. **Scout** the web for opportunities matching your profile
-2. **Format and rank** everything it finds with evidence-backed claims
-3. **Analyze strategically** via CEO and CFO advisor agents
-4. **Generate cover letters** tailored to specific job postings using your CV
-5. **Audit every step** so you can trace exactly how each result was produced
+1. **Scout** the web for opportunities matching your profile (jobs, certs, courses, events, groups, trends)
+2. **Validate** every discovered URL before results reach you
+3. **Format and rank** everything it finds with evidence-backed claims
+4. **Analyze strategically** via CEO and CFO advisor agents
+5. **Generate cover letters** tailored to specific job postings using your CV
+6. **Track token usage** per agent with budget enforcement
+7. **Audit every step** so you can trace exactly how each result was produced
 
-Everything is governed by policy-as-code (YAML files) that control which agents can access what tools, how many tokens they can spend, and what data crosses agent boundaries.
+Everything is governed by policy-as-code (YAML files) that control which agents can access what tools, how many tokens they can spend, and what data crosses agent boundaries. Users authenticate via JWT (or Google OAuth), and can bring their own API key for LLM access.
 
 ---
 
@@ -30,9 +32,11 @@ Everything is governed by policy-as-code (YAML files) that control which agents 
 
 The dashboard gives you a bird's-eye view: your profiles, recent runs, and quick stats.
 
-<img src="images/landing-page.png" width="850" alt="Dashboard" />
+<img src="docs/images/landing-page.png" width="850" alt="Dashboard" />
 
 Each profile is an independent workspace. A Developer, a UI/UX Designer, and a Marketing Manager can all coexist, each with their own runs, results, and cover letters.
+
+New to Stratoseer? The **Guide** page in the sidebar walks you through the full workflow step by step: creating a profile, starting a run, reviewing results, generating cover letters, and understanding policies.
 
 ---
 
@@ -40,7 +44,7 @@ Each profile is an independent workspace. A Developer, a UI/UX Designer, and a M
 
 Create a profile with your name, targets, constraints, skills, and CV. Skills can be imported directly from an uploaded CV.
 
-<img src="images/create-profile-landing.png" width="850" alt="Profile Details" />
+<img src="docs/images/create-profile-landing.png" width="850" alt="Profile Details" />
 
 The profile feeds every pipeline. Targets like "certify for AI" or "find a senior-backend job" drive what the scouts search for. Constraints like "hybrid working model" filter what comes back.
 
@@ -50,7 +54,7 @@ The profile feeds every pipeline. Targets like "certify for AI" or "find a senio
 
 Trigger a daily, weekly, or cover letter run. Each run records a full audit trail showing every agent that fired, what it produced, and when.
 
-<img src="images/runs.png" width="850" alt="Run Audit Trail" />
+<img src="docs/images/runs.png" width="850" alt="Run Audit Trail" />
 
 The audit trail is append-only. You can see the `goal_extractor` parse your profile into search prompts, the `web_scrapers` fan out across sources, and every intermediate result along the way.
 
@@ -58,9 +62,11 @@ The audit trail is append-only. You can see the `goal_extractor` parse your prof
 
 ### Results: Jobs
 
-The scouts find real job postings that match your profile. Each result includes a relevance summary and a link to the original source.
+The scouts find real job postings that match your profile. Each result includes a relevance summary and a direct link to the original posting. Job scraping currently targets **LinkedIn only**; support for additional platforms is planned for a future phase.
 
-<img src="images/recommended-jobs.png" width="850" alt="Recommended Jobs" />
+You can generate a cover letter directly from any job result by clicking the "Generate Cover Letter" action on the opportunities page, without leaving the results view.
+
+<img src="docs/images/recommended-jobs.png" width="850" alt="Recommended Jobs" />
 
 ---
 
@@ -68,7 +74,7 @@ The scouts find real job postings that match your profile. Each result includes 
 
 The same run also surfaces courses from platforms like Udemy and Coursera, matched to your skill gaps and career targets.
 
-<img src="images/recommended-courses.png" width="850" alt="Recommended Courses" />
+<img src="docs/images/recommended-courses.png" width="850" alt="Recommended Courses" />
 
 Results are organized into tabs: **Jobs**, **Certifications**, **Courses**, **Events**, **Groups**, and **Trends**.
 
@@ -78,25 +84,38 @@ Results are organized into tabs: **Jobs**, **Certifications**, **Courses**, **Ev
 
 A weekly run goes further. After gathering opportunities, the **CEO agent** produces strategic recommendations (prioritized by impact), and the **CFO agent** delivers a risk assessment with time estimates and ROI ratings.
 
-<img src="images/weekly-results.png" width="850" alt="Weekly Results" />
+<img src="docs/images/weekly-results.png" width="850" alt="Weekly Results" />
 
 ---
 
 ### Cover letters
 
-Select a discovered job (or paste a raw job description) and generate a tailored cover letter. The agent reads your CV and the posting, then writes a letter grounded in your actual experience.
+Select a discovered job (or paste a raw job description) and generate a tailored cover letter. You can also trigger this directly from the opportunities page by clicking "Generate Cover Letter" on any job result. The agent reads your CV and the posting, then writes a letter grounded in your actual experience.
 
-<img src="images/cover-letter-landing.png" width="850" alt="Cover Letters" />
+<img src="docs/images/cover-letter-landing.png" width="850" alt="Cover Letters" />
 
-<img src="images/generate-cover-letter.png" width="580" alt="Generate Cover Letter" />
+<img src="docs/images/generate-cover-letter.png" width="580" alt="Generate Cover Letter" />
 
 ---
 
 ### Policies
 
-All agent behavior is governed by read-only YAML policy files. Boundaries, budgets, redaction rules, allowed sources, and tool permissions are all inspectable from the GUI.
+Every agent in the system is bound by read-only YAML policy files under `policy/`. These are inspectable from the Policies page in the GUI. Four policy files govern all behavior:
 
-<img src="images/policies.png" width="580" alt="Policies" />
+- **`tools.yaml`** -- Tool allowlists and denylists per agent. Only web scrapers are permitted to use `web_search` and `web_fetch`. Planners (CEO, CFO), the data formatter, and the cover letter agent are explicitly denied network access and restricted to `llm_structured_output` only.
+- **`budgets.yaml`** -- Token limits (input and output) and step budgets per agent. Scraper budgets vary by pipeline mode (daily vs. weekly) and category, with minimum search and result counts enforced.
+- **`boundaries.yaml`** -- Data boundary rules defining exactly which fields each agent can read and write. For example, the goal extractor receives only `profile_targets` and outputs only `search_prompts`. No agent can access data outside its declared boundary.
+- **`redaction.yaml`** -- PII redaction rules applied to audit logs and run bundles. Emails, phone numbers, and SSNs are automatically replaced with redaction tokens before being persisted.
+
+<img src="docs/images/policies.png" width="580" alt="Policies" />
+
+---
+
+### Authentication and BYOK
+
+Stratoseer requires user accounts. Register with email/password or sign in with Google OAuth. An admin panel (accessible to the configured `ADMIN_EMAIL`) lets you manage users.
+
+**Bring Your Own Key (BYOK):** Each user can add their own OpenAI API key in the Settings page. Keys are encrypted at rest. Users without a personal key consume from the server-configured key (if one is set). Run gating in the frontend prevents launching pipelines when no usable key is available.
 
 ---
 
@@ -109,8 +128,9 @@ Three pipelines, each a LangGraph `StateGraph`:
 ```mermaid
 flowchart TD
     A([Start]) --> B[Goal Extractor]
-    B --> C[Web Scrapers<br/><i>5 parallel: jobs, certs,<br/>events, groups, trends</i>]
-    C --> D{Results?}
+    B --> C[Web Scrapers<br/><i>6 parallel: jobs, certs, courses,<br/>events, groups, trends</i>]
+    C --> U[URL Filter Report]
+    U --> D{Results?}
     D -- has data --> E[Data Formatter]
     D -- all empty --> F[Safe Degrade]
     E --> G[Audit Writer]
@@ -119,6 +139,7 @@ flowchart TD
 
     style A fill:#4f46e5,color:#fff
     style H fill:#4f46e5,color:#fff
+    style U fill:#7c3aed,color:#fff
     style D fill:#0891b2,color:#fff
     style F fill:#dc2626,color:#fff
 ```
@@ -128,8 +149,9 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Start]) --> B[Goal Extractor]
-    B --> C[Web Scrapers<br/><i>5 parallel: jobs, certs,<br/>events, groups, trends</i>]
-    C --> D{Results?}
+    B --> C[Web Scrapers<br/><i>6 parallel: jobs, certs, courses,<br/>events, groups, trends</i>]
+    C --> U[URL Filter Report]
+    U --> D{Results?}
     D -- has data --> E[Data Formatter]
     D -- all empty --> F[Safe Degrade]
     E --> G[CEO Agent<br/><i>Strategic recommendations</i>]
@@ -140,6 +162,7 @@ flowchart TD
 
     style A fill:#4f46e5,color:#fff
     style K fill:#4f46e5,color:#fff
+    style U fill:#7c3aed,color:#fff
     style D fill:#0891b2,color:#fff
     style F fill:#dc2626,color:#fff
     style G fill:#059669,color:#fff
@@ -161,6 +184,8 @@ flowchart TD
 **Key design rules enforced by the policy engine:**
 
 - **Scouts** (web scrapers) can access the network. Planners (CEO/CFO) cannot.
+- **URL Filter Report** runs after scraping to validate and filter discovered URLs before formatting.
+- **Per-agent token budgets** are enforced at runtime. Each agent has input/output token limits defined in `policy/budgets.yaml`.
 - **Safe degradation** activates when all scrapers return empty. The pipeline continues with an explicit partial status rather than failing silently.
 - **Audit is terminal.** Every pipeline ends at the audit writer. No conditional exit paths.
 - **CEO/CFO always run** in the weekly pipeline, even on empty data, so strategic analysis is always recorded.
@@ -195,25 +220,54 @@ pip install -e ".[dev]"
 
 ### 3. Configure environment
 
-Create a `.env` file in the project root:
+Copy `.env.example` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Key variables:
 
 ```env
+# Database
 POSTGRES_USER=assistant
 POSTGRES_PASSWORD=assistant
 POSTGRES_DB=assistant
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
+
+# Server
 APP_HOST=0.0.0.0
 APP_PORT=8000
 APP_RELOAD=true
-POLICY_DIR=policy
-ARTIFACTS_DIR=artifacts
-LOG_LEVEL=INFO
 
-# Optional: enable real LLM calls (off by default, mock agents used)
-# OPENAI_API_KEY=sk-...
-# LLM_ENABLED=true
+# LLM (required -- no mock agents, a real API key is needed)
+API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+
+# Per-agent model overrides (blank = use LLM_MODEL default)
+GOAL_EXTRACTOR_MODEL=
+WEB_SCRAPER_MODEL=
+DATA_FORMATTER_MODEL=
+CEO_MODEL=
+CFO_MODEL=
+COVER_LETTER_MODEL=
+
+# Auth
+JWT_SECRET=change-me-to-a-long-random-string
+ADMIN_EMAIL=you@example.com
+
+# Optional: Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Optional: LangSmith tracing
+LANGSMITH_TRACING=false
+LANGSMITH_API_KEY=
+LANGSMITH_PROJECT=Stratoseer
 ```
+
+See `.env.example` for the complete list including SMTP and deployment settings.
 
 ### 4. Start the database
 
@@ -230,7 +284,13 @@ npm run build
 cd ..
 ```
 
-### 6. Run the server
+### 6. Run database migrations
+
+```bash
+alembic upgrade head
+```
+
+### 7. Run the server
 
 ```bash
 uvicorn app.main:app --reload
@@ -238,7 +298,7 @@ uvicorn app.main:app --reload
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-### 7. Run tests
+### 8. Run tests
 
 ```bash
 pytest
@@ -258,6 +318,24 @@ npm run dev
 ```
 
 The Vite dev server runs on `http://localhost:5173` and proxies `/api` requests to the FastAPI backend on port 8000.
+
+---
+
+## Deployment
+
+### Docker Compose (local)
+
+The included `docker-compose.yml` provides PostgreSQL and SonarQube:
+
+```bash
+docker compose up -d      # Starts Postgres on :5432 and SonarQube on :9000
+```
+
+### Render (cloud)
+
+A `render.yaml` blueprint is included for one-click deploy to [Render](https://render.com). It provisions a managed PostgreSQL database and a web service that builds both backend and frontend, then runs Alembic migrations on each deploy.
+
+Set the required environment variables (API_KEY, JWT_SECRET, ADMIN_EMAIL, etc.) in the Render dashboard.
 
 ---
 
@@ -289,7 +367,15 @@ When all scrapers return empty, the pipeline explicitly marks the run as partial
 
 ### Async-first
 
-All agents, the audit writer, and the replay/diff engines are async. Mock agents return before any `await`, so tests run fast. Real LLM-backed agents will benefit from non-blocking I/O without any plumbing changes.
+All agents, the audit writer, and the replay/diff engines are async, benefiting from non-blocking I/O across LLM calls and web scraping.
+
+### Per-agent token tracking
+
+Each agent's input and output tokens are tracked against budgets defined in `policy/budgets.yaml`. Per-mode scraper budgets (daily vs. weekly) allow different search depths. Budget overruns are logged and enforced.
+
+### BYOK with encrypted storage
+
+User-provided API keys are encrypted at rest using Fernet symmetric encryption. The frontend gates run creation on whether a usable key is available (personal or server-level).
 
 ### System overview
 
@@ -304,9 +390,12 @@ All agents, the audit writer, and the replay/diff engines are async. Mock agents
 | Orchestration | LangGraph (StateGraph) + LangChain |
 | Backend | FastAPI + Pydantic v2 |
 | Frontend | React + Vite + TypeScript + Tailwind CSS v4 + shadcn/ui |
+| Auth | JWT + Google OAuth + BYOK API key encryption |
 | Database | PostgreSQL + append-only JSONL |
 | Real-time | Server-Sent Events (SSE) |
+| Observability | LangSmith tracing (optional) |
 | Policies | YAML under `policy/` |
+| Deploy | Docker Compose (local) / Render (cloud) |
 | Testing | pytest + pytest-asyncio + in-memory SQLite |
 
 ---
