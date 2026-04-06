@@ -19,7 +19,6 @@ router = APIRouter(tags=["cover-letters"])
     "/profiles/{profile_id}/cover-letters",
     status_code=201,
     responses={
-        402: {"description": "API key required"},
         404: {"description": "Profile or job opportunity not found"},
         422: {"description": "Either job_opportunity_id or jd_text must be provided"},
     },
@@ -37,9 +36,7 @@ async def create_cover_letter(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except ValueError as exc:
-        detail = str(exc)
-        status = 402 if "API key" in detail or "Free trial" in detail else 422
-        raise HTTPException(status_code=status, detail=detail)
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 @router.get("/profiles/{profile_id}/cover-letters")

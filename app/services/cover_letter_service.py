@@ -18,7 +18,7 @@ from app.models.profile import UserProfile
 from app.models.run import Run
 from app.schemas.cover_letter import CoverLetterCreate, CoverLetterRead
 from app.models.user import User
-from app.services.api_key_service import resolve_api_key
+from app.services.api_key_service import get_user_api_key
 from app.services.run_service import (
     _parse_profile_constraints,
     _parse_profile_skills,
@@ -246,9 +246,10 @@ async def create_cover_letter(
     if profile is None:
         raise LookupError("Profile not found")
 
-    # Resolve API key (may raise ValueError if free trial exhausted)
-    api_key = resolve_api_key(user)
-    using_free_trial = not user.encrypted_api_key and user.role != "admin"
+    # Use the user's own key if available, otherwise fall back to server key
+    api_key = get_user_api_key(user) or settings.api_key
+    if not api_key:
+        raise ValueError("No API key available for cover letter generation")
 
     if not profile.cv_data:
         raise ValueError("Profile is incomplete: please upload a CV before generating a cover letter")
@@ -264,10 +265,6 @@ async def create_cover_letter(
     targets = _parse_profile_targets(profile)
     skills = _parse_profile_skills(profile)
     constraints = _parse_profile_constraints(profile)
-
-    # Increment free run counter if using the app's trial key
-    if using_free_trial:
-        user.free_runs_used += 1
 
     # Create a run record
     run = Run(profile_id=profile_id, mode="cover_letter", status="pending")
