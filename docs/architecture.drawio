@@ -178,7 +178,7 @@
         <mxCell id="57" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97706;fontColor=#ffffff;strokeColor=none;fontSize=10;arcSize=20;" value="Policy Engine" vertex="1">
           <mxGeometry height="30" width="110" x="120" y="862" as="geometry" />
         </mxCell>
-        <mxCell id="58" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97706;fontColor=#ffffff;strokeColor=none;fontSize=10;arcSize=20;" value="Verifier&lt;br&gt;&lt;i&gt;(no LLM)&lt;/i&gt;" vertex="1">
+        <mxCell id="58" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97706;fontColor=#ffffff;strokeColor=none;fontSize=10;arcSize=20;" value="Verifier&lt;br&gt;&lt;i&gt;(LLM + Tool)&lt;/i&gt;" vertex="1">
           <mxGeometry height="30" width="95" x="248" y="862" as="geometry" />
         </mxCell>
         <mxCell id="59" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97706;fontColor=#ffffff;strokeColor=none;fontSize=10;arcSize=20;" value="Audit Writer" vertex="1">
