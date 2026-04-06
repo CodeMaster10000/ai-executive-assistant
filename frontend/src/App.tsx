@@ -18,6 +18,7 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
 import VerifyEmailPage from "@/pages/VerifyEmailPage"
 import AdminPage from "@/pages/AdminPage"
+import SettingsPage from "@/pages/SettingsPage"
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/profiles/:profileId/cover-letters" element={<CoverLettersPage />} />
             <Route path="/policies" element={<PoliciesPage />} />
             <Route path="/guide" element={<GuidePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

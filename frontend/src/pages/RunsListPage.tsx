@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { Play, Ban, Trash2 } from "lucide-react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { Play, Ban, Trash2, AlertTriangle } from "lucide-react"
 import { listRuns, createRun, cancelRun, deleteRun, bulkDeleteRuns } from "@/api/runs"
 import type { Run, RunCreate } from "@/api/types"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -36,11 +36,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useAuth } from "@/contexts/AuthContext"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 
 export default function RunsListPage() {
   const { profileId } = useParams()
   const navigate = useNavigate()
+  const { needsApiKey } = useAuth()
   const [runs, setRuns] = useState<Run[]>([])
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<RunCreate["mode"]>("weekly")
@@ -127,6 +130,20 @@ export default function RunsListPage() {
     <div>
       <PageHeader title="Runs" description="Pipeline execution history" />
 
+      {/* BYOK gate */}
+      {needsApiKey && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Free trial exhausted. Please{" "}
+            <Link to="/settings" className="underline font-medium">
+              add your OpenAI API key
+            </Link>{" "}
+            in Settings to continue running pipelines.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Start run controls */}
       <Card className="p-4 mb-6">
         <div className="flex items-center gap-3">
@@ -139,7 +156,7 @@ export default function RunsListPage() {
               <SelectItem value="weekly">Weekly</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleStart}>
+          <Button onClick={handleStart} disabled={needsApiKey}>
             <Play className="h-4 w-4 mr-2" /> Start Run
           </Button>
         </div>

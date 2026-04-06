@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { useParams, useSearchParams } from "react-router-dom"
-import { FileEdit, Plus, Loader2, ExternalLink, Trash2, Copy } from "lucide-react"
+import { useParams, useSearchParams, Link } from "react-router-dom"
+import { FileEdit, Plus, Loader2, ExternalLink, Trash2, Copy, AlertTriangle } from "lucide-react"
 import { listCoverLetters, createCoverLetter, deleteCoverLetter } from "@/api/coverLetters"
 import { listJobs } from "@/api/results"
 import { dedup } from "@/lib/dedup"
@@ -39,11 +39,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useAuth } from "@/contexts/AuthContext"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 
 export default function CoverLettersPage() {
   const { profileId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { needsApiKey } = useAuth()
   const [letters, setLetters] = useState<CoverLetter[]>([])
   const [jobs, setJobs] = useState<JobOpportunity[]>([])
   const [loading, setLoading] = useState(true)
@@ -170,13 +173,26 @@ export default function CoverLettersPage() {
 
   return (
     <div>
+      {needsApiKey && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Free trial exhausted. Please{" "}
+            <Link to="/settings" className="underline font-medium">
+              add your OpenAI API key
+            </Link>{" "}
+            in Settings to continue generating cover letters.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <PageHeader
         title="Cover Letters"
         description="Generated cover letters"
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={needsApiKey}>
                 <Plus className="h-4 w-4 mr-2" /> Generate
               </Button>
             </DialogTrigger>

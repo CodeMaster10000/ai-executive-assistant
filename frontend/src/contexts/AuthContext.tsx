@@ -12,6 +12,7 @@ interface AuthContextValue {
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   isAdmin: boolean
+  needsApiKey: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -65,9 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const isAdmin = user?.role === "admin"
+  const needsApiKey = user
+    ? user.free_runs_used >= user.free_run_limit && !user.has_api_key && user.role !== "admin"
+    : false
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin, needsApiKey }}>
       {children}
     </AuthContext.Provider>
   )

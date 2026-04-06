@@ -251,6 +251,20 @@ export interface UserRead {
   email_verified: boolean
   created_at: string
   last_login_at: string | null
+  has_api_key: boolean
+  free_runs_used: number
+  free_run_limit: number
+}
+
+export interface ApiKeyUpdate {
+  api_key: string
+}
+
+export interface ApiKeyStatus {
+  has_api_key: boolean
+  free_runs_used: number
+  free_run_limit: number
+  key_last_four: string | null
 }
 
 export interface TokenResponse {

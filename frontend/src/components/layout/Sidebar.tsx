@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Shield, BookOpen, Moon, Sun, Users, LogOut, type LucideIcon } from "lucide-react"
+import { LayoutDashboard, Shield, BookOpen, Settings, Moon, Sun, Users, LogOut, type LucideIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
@@ -17,6 +17,7 @@ const globalNav: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
   { label: "Policies", to: "/policies", icon: Shield },
   { label: "Guide", to: "/guide", icon: BookOpen },
+  { label: "Settings", to: "/settings", icon: Settings },
 ]
 
 function SidebarLink({ item }: { item: NavItem }) {
