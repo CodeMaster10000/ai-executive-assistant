@@ -653,5 +653,5 @@ async def recover_orphaned_runs() -> int:
         await db.commit()
         count = result.rowcount  # type: ignore[union-attr]
         if count:
-            log.info("Recovered %d orphaned run(s) from previous session", count)
+            logger.info("Recovered %d orphaned run(s) from previous session", count)
         return count
