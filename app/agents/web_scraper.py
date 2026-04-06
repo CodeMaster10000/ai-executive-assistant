@@ -28,8 +28,6 @@ _DIRECTORY_PATTERNS: dict[str, list[str]] = {
         "linkedin.com/jobs/?",
     ],
     "event": [
-        "eventbrite.com/d/",
-        "meetup.com/find/",
         "meetup.com/topics/",
         "/search?",
         "/search/?",

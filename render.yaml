@@ -1,0 +1,76 @@
+databases:
+  - name: stratoseer-db
+    plan: free
+    databaseName: assistant
+    user: assistant
+
+services:
+  - type: web
+    name: stratoseer
+    runtime: python
+    plan: free
+    buildCommand: pip install -e . && cd frontend && npm install && npm run build
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    preDeployCommand: alembic upgrade head
+    envVars:
+      # Python and Node versions for build
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: NODE_VERSION
+        value: "25.2.1"
+
+      # Database (resolved from Render managed PostgreSQL)
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: stratoseer-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: stratoseer-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: stratoseer-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: stratoseer-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: stratoseer-db
+          property: database
+
+      # Logging
+      - key: LOG_LEVEL
+        sync: false
+      - key: LANGSMITH_TRACING
+        sync: false
+
+      ## AI
+      - key: API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: "gpt-4o-mini"
+
+      ## Security
+      - key: JWT_SECRET
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
