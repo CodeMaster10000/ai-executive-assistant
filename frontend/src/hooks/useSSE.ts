@@ -14,7 +14,8 @@ export function useSSE(profileId: string | undefined, runId: string | undefined)
     if (!profileId || !runId) return
 
     const token = getAccessToken()
-    const url = `/api/profiles/${profileId}/runs/${runId}/stream${token ? `?token=${encodeURIComponent(token)}` : ""}`
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : ""
+    const url = `/api/profiles/${profileId}/runs/${runId}/stream${tokenParam}`
     const es = new EventSource(url)
     esRef.current = es
 

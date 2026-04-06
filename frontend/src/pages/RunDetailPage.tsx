@@ -15,6 +15,16 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 
+function formatDuration(run: Run): string {
+  if (run.started_at && run.finished_at) {
+    return `${((new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) / 1000).toFixed(1)}s`
+  }
+  if (run.started_at) {
+    return "In progress..."
+  }
+  return "-"
+}
+
 const AGENTS_BY_MODE: Record<string, string[]> = {
   daily: ["goal_extractor", "web_scrapers", "url_filter_report", "data_formatter", "audit_writer"],
   weekly: ["goal_extractor", "web_scrapers", "url_filter_report", "data_formatter", "ceo", "cfo", "audit_writer"],
@@ -91,6 +101,12 @@ const AGENT_FUN_MESSAGES: Record<string, string[]> = {
 
 type AgentStatus = "idle" | "running" | "complete" | "partial" | "failed"
 
+function statusFromVerification(verificationStatus: string | null | undefined): AgentStatus {
+  if (verificationStatus === "fail") return "failed"
+  if (verificationStatus === "partial") return "partial"
+  return "complete"
+}
+
 function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, AgentStatus> {
   const agents = AGENTS_BY_MODE[mode] ?? AGENTS_BY_MODE.daily
   const statuses: Record<string, AgentStatus> = {}
@@ -98,13 +114,7 @@ function deriveAgentStatuses(mode: string, events: SSEEvent[]): Record<string, A
   for (const e of events) {
     if (e.agent && (e.type === "agent_started" || e.type === "static_validator_started")) statuses[e.agent] = "running"
     if (e.agent && (e.type === "agent_completed" || e.type === "static_validator_completed")) {
-      if (e.verification_status === "fail") {
-        statuses[e.agent] = "failed"
-      } else if (e.verification_status === "partial") {
-        statuses[e.agent] = "partial"
-      } else {
-        statuses[e.agent] = "complete"
-      }
+      statuses[e.agent] = statusFromVerification(e.verification_status)
     }
   }
   return statuses
@@ -122,9 +132,8 @@ function deriveAgentStatusesFromAudit(mode: string, events: AuditEvent[]): Recor
       statuses[e.agent] = "complete"
     }
     if (e.event_type === "verifier_result" && agents.includes(e.agent)) {
-      const status = (e.data as Record<string, unknown>)?.status
-      if (status === "fail") statuses[e.agent] = "failed"
-      else if (status === "partial") statuses[e.agent] = "partial"
+      const status = (e.data as Record<string, unknown>)?.status as string | undefined
+      statuses[e.agent] = statusFromVerification(status)
     }
   }
   return statuses
@@ -195,11 +204,14 @@ export default function RunDetailPage() {
   if (!run) return <p className="text-muted-foreground">Run not found.</p>
 
   const isActive = run.status === "running" || run.status === "pending"
-  const agentStatuses = sseEvents.length > 0
-    ? deriveAgentStatuses(run.mode, sseEvents)
-    : auditEvents.length > 0
-      ? deriveAgentStatusesFromAudit(run.mode, auditEvents)
-      : deriveAgentStatuses(run.mode, [])
+  let agentStatuses: Record<string, AgentStatus>
+  if (sseEvents.length > 0) {
+    agentStatuses = deriveAgentStatuses(run.mode, sseEvents)
+  } else if (auditEvents.length > 0) {
+    agentStatuses = deriveAgentStatusesFromAudit(run.mode, auditEvents)
+  } else {
+    agentStatuses = deriveAgentStatuses(run.mode, [])
+  }
 
   return (
     <div>
@@ -241,11 +253,7 @@ export default function RunDetailPage() {
             <div>
               <p className="text-xs text-muted-foreground">Duration</p>
               <p className="text-sm font-medium">
-                {run.started_at && run.finished_at
-                  ? `${((new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) / 1000).toFixed(1)}s`
-                  : run.started_at
-                    ? "In progress..."
-                    : "-"}
+                {formatDuration(run)}
               </p>
             </div>
           </div>
@@ -328,15 +336,17 @@ function AgentFunMessage({ agent, status }: { agent: string; status: AgentStatus
     setVisible(true)
   }, [agent, status])
 
+  const rotateMessage = () => {
+    setVisible(false)
+    setTimeout(() => {
+      setIndex((prev) => (prev + 1) % queue.length)
+      setVisible(true)
+    }, 300)
+  }
+
   useEffect(() => {
     if (status !== "running" || queue.length <= 1) return
-    const interval = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setIndex((prev) => (prev + 1) % queue.length)
-        setVisible(true)
-      }, 300)
-    }, agent === "web_scrapers" ? 8000 : 3000)
+    const interval = setInterval(rotateMessage, agent === "web_scrapers" ? 8000 : 3000)
     return () => clearInterval(interval)
   }, [agent, status, queue])
 
@@ -420,7 +430,7 @@ function PrettyEventData({ data }: { data: Record<string, unknown> }) {
         return (
           <div className="space-y-1.5 mt-1">
             {value.map((item, j) => (
-              <div key={j} className="bg-background rounded px-2.5 py-1.5 text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
+              <div key={`item-${j}`} className="bg-background rounded px-2.5 py-1.5 text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
                 {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
                   <span key={k}>
                     <span className="text-muted-foreground">{k}: </span>
@@ -513,7 +523,7 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
         const isOpen = expanded.has(i)
         const isJson = jsonMode.has(i)
         return (
-          <div key={i} className="relative">
+          <div key={`${e.timestamp}-${e.event_type}-${i}`} className="relative">
             <span
               className={`absolute -left-[1.85rem] top-1.5 h-3 w-3 rounded-full border-2 border-background ${dotColor[e.event_type] ?? "bg-gray-400"}`}
             />
@@ -539,7 +549,7 @@ function AuditTimeline({ events }: { events: AuditEvent[] }) {
                     type="button"
                     onClick={() => toggleJson(i)}
                     title={isJson ? "Pretty view" : "JSON view"}
-                    className={`p-1 rounded cursor-pointer ${isJson ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className="p-1 rounded cursor-pointer text-muted-foreground hover:text-foreground"
                   >
                     {isJson ? <Eye className="h-3.5 w-3.5" /> : <Code className="h-3.5 w-3.5" />}
                   </button>

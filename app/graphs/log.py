@@ -114,6 +114,97 @@ async def _publish_sse(
 
 
 # ------------------------------------------------------------------
+# Shared verification + audit helpers
+# ------------------------------------------------------------------
+
+
+def _build_verification_dict(
+    verifier: Verifier | None,
+    agent_name: str,
+    result: dict[str, Any],
+) -> tuple[dict[str, Any], str]:
+    """Run verifier and return (verification_dict, verification_status).
+
+    Returns an empty dict and ``"pass"`` when no verifier is configured.
+    """
+    if not verifier:
+        return {}, "pass"
+    verification = verifier.verify(agent_name, result)
+    verification_dict = {
+        "agent_name": verification.agent_name,
+        "status": verification.status.value,
+        "checks": [
+            {
+                "check_name": c.check_name,
+                "status": c.status.value,
+                "message": c.message,
+            }
+            for c in verification.checks
+        ],
+        "timestamp": verification.timestamp,
+    }
+    return verification_dict, verification.status.value
+
+
+async def _write_audit_end(
+    audit_writer: AuditWriter | None,
+    run_id: str,
+    now: Callable[[], str],
+    evt_end: str,
+    agent_name: str,
+    node_type: str,
+    data: dict[str, Any],
+    verification_dict: dict[str, Any],
+) -> None:
+    """Write the agent-end and optional verifier-result audit events."""
+    if not audit_writer:
+        return
+    await audit_writer.append(run_id, AuditEvent(
+        timestamp=now(),
+        event_type=evt_end,
+        agent=agent_name,
+        node_type=node_type,
+        data=data,
+    ))
+    if verification_dict:
+        await audit_writer.append(run_id, AuditEvent(
+            timestamp=now(),
+            event_type="verifier_result",
+            agent=agent_name,
+            node_type=node_type,
+            data=verification_dict,
+        ))
+
+
+def _accumulate_verifier_results(
+    state: dict[str, Any],
+    result: dict[str, Any],
+    verification_dict: dict[str, Any],
+) -> None:
+    """Append verification_dict to the running list in *result* (mutates in place)."""
+    if verification_dict:
+        prev = list(state.get("verifier_results", []))
+        prev.append(verification_dict)
+        result["verifier_results"] = prev
+
+
+async def _record_token_usage(
+    token_tracker: RunTokenTracker | None,
+    agent_label: str,
+    result: dict[str, Any],
+) -> None:
+    """Pop ``_token_usage`` from *result* and feed it into the tracker."""
+    for usage in result.pop("_token_usage", []):
+        if token_tracker and usage:
+            await token_tracker.record(
+                agent_label,
+                usage.get("model_name", ""),
+                usage.get("input_tokens", 0),
+                usage.get("output_tokens", 0),
+            )
+
+
+# ------------------------------------------------------------------
 # make_node: shared single-agent node factory
 # ------------------------------------------------------------------
 
@@ -178,55 +269,20 @@ def make_node(
         result = await call_agent(agent, state)
         elapsed = time.monotonic() - t0
 
-        # Extract and record token usage
-        for usage in result.pop("_token_usage", []):
-            if token_tracker and usage:
-                await token_tracker.record(
-                    agent_name,
-                    usage.get("model_name", ""),
-                    usage.get("input_tokens", 0),
-                    usage.get("output_tokens", 0),
-                )
+        await _record_token_usage(token_tracker, agent_name, result)
 
         node_end(pipeline, state, agent_name, elapsed)
 
         # Verify
-        verification_dict: dict[str, Any] = {}
-        verification_status = "pass"
-        if verifier:
-            verification = verifier.verify(agent_name, result)
-            verification_status = verification.status.value
-            verification_dict = {
-                "agent_name": verification.agent_name,
-                "status": verification.status.value,
-                "checks": [
-                    {
-                        "check_name": c.check_name,
-                        "status": c.status.value,
-                        "message": c.message,
-                    }
-                    for c in verification.checks
-                ],
-                "timestamp": verification.timestamp,
-            }
+        verification_dict, verification_status = _build_verification_dict(
+            verifier, agent_name, result,
+        )
 
-        # Audit: end
-        if audit_writer:
-            await audit_writer.append(run_id, AuditEvent(
-                timestamp=now(),
-                event_type=evt_end,
-                agent=agent_name,
-                node_type=node_type,
-                data=result,
-            ))
-            if verification_dict:
-                await audit_writer.append(run_id, AuditEvent(
-                    timestamp=now(),
-                    event_type="verifier_result",
-                    agent=agent_name,
-                    node_type=node_type,
-                    data=verification_dict,
-                ))
+        # Audit: end + verifier
+        await _write_audit_end(
+            audit_writer, run_id, now, evt_end,
+            agent_name, node_type, result, verification_dict,
+        )
 
         # SSE: completed
         await _publish_sse(event_manager, run_id, {
@@ -239,10 +295,7 @@ def make_node(
         })
 
         # Accumulate verifier results
-        if verification_dict:
-            prev = list(state.get("verifier_results", []))
-            prev.append(verification_dict)
-            result["verifier_results"] = prev
+        _accumulate_verifier_results(state, result, verification_dict)
 
         return result
 
@@ -315,15 +368,9 @@ def make_fan_out_node(
         all_errors: list[str] = []
         results: dict[str, Any] = {}
         for (category, _), ret in zip(categories, returns):
-            # Extract and record token usage from each scraper
-            for usage in ret.pop("_token_usage", []):
-                if token_tracker and usage:
-                    await token_tracker.record(
-                        f"{agent_name}/{category}",
-                        usage.get("model_name", ""),
-                        usage.get("input_tokens", 0),
-                        usage.get("output_tokens", 0),
-                    )
+            await _record_token_usage(
+                token_tracker, f"{agent_name}/{category}", ret,
+            )
             result_key = f"raw_{category}_results"
             results[result_key] = ret.get(result_key, [])
             filtered_key = f"filtered_{category}_urls"
@@ -339,40 +386,15 @@ def make_fan_out_node(
         )
 
         # Verify merged output
-        verification_dict: dict[str, Any] = {}
-        verification_status = "pass"
-        if verifier:
-            verification = verifier.verify(agent_name, results)
-            verification_status = verification.status.value
-            verification_dict = {
-                "agent_name": verification.agent_name,
-                "status": verification.status.value,
-                "checks": [
-                    {
-                        "check_name": c.check_name,
-                        "status": c.status.value,
-                        "message": c.message,
-                    }
-                    for c in verification.checks
-                ],
-                "timestamp": verification.timestamp,
-            }
+        verification_dict, verification_status = _build_verification_dict(
+            verifier, agent_name, results,
+        )
 
-        # Audit: agent end
-        if audit_writer:
-            await audit_writer.append(run_id, AuditEvent(
-                timestamp=now(),
-                event_type="agent_end",
-                agent=agent_name,
-                data=results,
-            ))
-            if verification_dict:
-                await audit_writer.append(run_id, AuditEvent(
-                    timestamp=now(),
-                    event_type="verifier_result",
-                    agent=agent_name,
-                    data=verification_dict,
-                ))
+        # Audit: agent end + verifier
+        await _write_audit_end(
+            audit_writer, run_id, now, "agent_end",
+            agent_name, "agent", results, verification_dict,
+        )
 
         # SSE: agent completed
         await _publish_sse(event_manager, run_id, {
@@ -388,10 +410,7 @@ def make_fan_out_node(
             **results,
             "errors": state.get("errors", []) + all_errors,
         }
-        if verification_dict:
-            prev = list(state.get("verifier_results", []))
-            prev.append(verification_dict)
-            merged["verifier_results"] = prev
+        _accumulate_verifier_results(state, merged, verification_dict)
 
         return merged
 

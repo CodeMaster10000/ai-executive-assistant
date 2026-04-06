@@ -37,6 +37,33 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
+function levelVariant(level: string): "destructive" | "default" | "secondary" {
+  if (level === "high") return "destructive"
+  if (level === "medium") return "default"
+  return "secondary"
+}
+
+function makeResultHandlers(
+  profileId: string,
+  category: string,
+  setter: React.Dispatch<React.SetStateAction<any[]>>,
+) {
+  return {
+    onEdit: async (id: string, newTitle: string) => {
+      await updateResult(profileId, category, id, { title: newTitle })
+      setter((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
+    },
+    onDelete: async (id: string) => {
+      await deleteResult(profileId, category, id)
+      setter((prev) => prev.filter((x) => x.id !== id))
+    },
+    onForceDelete: async (id: string) => {
+      await deleteResult(profileId, category, id, true)
+      setter((prev) => prev.filter((x) => x.id !== id))
+    },
+  }
+}
+
 export default function OpportunitiesPage() {
   const { profileId } = useParams()
   const navigate = useNavigate()
@@ -55,6 +82,17 @@ export default function OpportunitiesPage() {
 
   const selectedRun = runs.find((r) => r.id === runId)
   const isWeekly = selectedRun?.mode === "weekly"
+
+  const jobHandlers = makeResultHandlers(profileId!, "jobs", setJobs)
+  const certHandlers = makeResultHandlers(profileId!, "certifications", setCertifications)
+  const courseHandlers = makeResultHandlers(profileId!, "courses", setCourses)
+  const eventHandlers = makeResultHandlers(profileId!, "events", setEvents)
+  const groupHandlers = makeResultHandlers(profileId!, "groups", setGroups)
+  const trendHandlers = makeResultHandlers(profileId!, "trends", setTrends)
+
+  function handleGenerateCoverLetter(id: string) {
+    navigate(`/profiles/${profileId}/cover-letters?job_id=${id}`)
+  }
 
   useEffect(() => {
     if (!profileId) return
@@ -153,9 +191,9 @@ export default function OpportunitiesPage() {
                 <p className="text-sm text-muted-foreground">No recommendations available.</p>
               ) : (
                 insights.strategic_recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-start gap-3 rounded-md border p-3">
+                  <div key={`rec-${rec.area}-${i}`} className="flex items-start gap-3 rounded-md border p-3">
                     <Badge
-                      variant={rec.priority === "high" ? "destructive" : rec.priority === "medium" ? "default" : "secondary"}
+                      variant={levelVariant(rec.priority)}
                       className="mt-0.5 shrink-0 text-xs"
                     >
                       {rec.priority}
@@ -185,11 +223,11 @@ export default function OpportunitiesPage() {
                 <p className="text-sm text-muted-foreground">No risk assessments available.</p>
               ) : (
                 insights.risk_assessments.map((ra, i) => (
-                  <div key={i} className="rounded-md border p-3 space-y-1.5">
+                  <div key={`risk-${ra.area}-${i}`} className="rounded-md border p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{ra.area}</p>
                       <Badge
-                        variant={ra.risk_level === "high" ? "destructive" : ra.risk_level === "medium" ? "default" : "secondary"}
+                        variant={levelVariant(ra.risk_level)}
                         className="text-xs"
                       >
                         {ra.risk_level} risk
@@ -240,21 +278,8 @@ export default function OpportunitiesPage() {
                   description={j.description}
                   url={j.url}
                   badges={[j.location, j.salary_range].filter(Boolean) as string[]}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "jobs", id, { title: newTitle })
-                    setJobs((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "jobs", id)
-                    setJobs((prev) => prev.filter((x) => x.id !== id))
-                  }}
-                  onForceDelete={async (id) => {
-                    await deleteResult(profileId!, "jobs", id, true)
-                    setJobs((prev) => prev.filter((x) => x.id !== id))
-                  }}
-                  onGenerateCoverLetter={(id) => {
-                    navigate(`/profiles/${profileId}/cover-letters?job_id=${id}`)
-                  }}
+                  {...jobHandlers}
+                  onGenerateCoverLetter={handleGenerateCoverLetter}
                 />
               )}
             />
@@ -274,14 +299,7 @@ export default function OpportunitiesPage() {
                   description={c.description}
                   url={c.url}
                   badges={[c.cost, c.duration].filter(Boolean) as string[]}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "certifications", id, { title: newTitle })
-                    setCertifications((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "certifications", id)
-                    setCertifications((prev) => prev.filter((x) => x.id !== id))
-                  }}
+                  {...certHandlers}
                 />
               )}
             />
@@ -301,14 +319,7 @@ export default function OpportunitiesPage() {
                   description={c.description}
                   url={c.url}
                   badges={[c.cost, c.duration].filter(Boolean) as string[]}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "courses", id, { title: newTitle })
-                    setCourses((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "courses", id)
-                    setCourses((prev) => prev.filter((x) => x.id !== id))
-                  }}
+                  {...courseHandlers}
                 />
               )}
             />
@@ -328,14 +339,7 @@ export default function OpportunitiesPage() {
                   description={e.description}
                   url={e.url}
                   badges={[e.event_date, e.location].filter(Boolean) as string[]}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "events", id, { title: newTitle })
-                    setEvents((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "events", id)
-                    setEvents((prev) => prev.filter((x) => x.id !== id))
-                  }}
+                  {...eventHandlers}
                 />
               )}
             />
@@ -355,14 +359,7 @@ export default function OpportunitiesPage() {
                   description={g.description}
                   url={g.url}
                   badges={g.member_count ? [`${g.member_count.toLocaleString()} members`] : []}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "groups", id, { title: newTitle })
-                    setGroups((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "groups", id)
-                    setGroups((prev) => prev.filter((x) => x.id !== id))
-                  }}
+                  {...groupHandlers}
                 />
               )}
             />
@@ -383,14 +380,7 @@ export default function OpportunitiesPage() {
                   url={t.url}
                   badges={[t.category].filter(Boolean) as string[]}
                   relevance={t.relevance}
-                  onEdit={async (id, newTitle) => {
-                    await updateResult(profileId!, "trends", id, { title: newTitle })
-                    setTrends((prev) => prev.map((x) => (x.id === id ? { ...x, title: newTitle } : x)))
-                  }}
-                  onDelete={async (id) => {
-                    await deleteResult(profileId!, "trends", id)
-                    setTrends((prev) => prev.filter((x) => x.id !== id))
-                  }}
+                  {...trendHandlers}
                 />
               )}
             />

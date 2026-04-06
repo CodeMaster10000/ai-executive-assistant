@@ -168,6 +168,21 @@ class WebScraperAgent(LLMAgent):
         )
 
     # ------------------------------------------------------------------
+    # Helper: extract name, id, args from a tool_call (dict or object)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_tool_call(tool_call: Any) -> tuple[str | None, str | None, dict]:
+        """Extract (name, id, args) from a tool_call which may be a dict or object."""
+        if isinstance(tool_call, dict):
+            return tool_call.get("name"), tool_call.get("id"), tool_call.get("args", {})
+        return (
+            getattr(tool_call, "name", None),
+            getattr(tool_call, "id", None),
+            getattr(tool_call, "args", {}),
+        )
+
+    # ------------------------------------------------------------------
     # Helper: process one batch of tool calls from an LLM response
     # ------------------------------------------------------------------
 
@@ -187,11 +202,12 @@ class WebScraperAgent(LLMAgent):
         batch_searches = 0
         for tool_call in response.tool_calls:
             try:
-                tc_name = tool_call.get("name") if isinstance(tool_call, dict) else getattr(tool_call, "name", None)
-                tc_id = tool_call.get("id") if isinstance(tool_call, dict) else getattr(tool_call, "id", None)
-                tc_args = tool_call.get("args") if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+                tc_name, tc_id, tc_args = self._parse_tool_call(tool_call)
                 if not tc_name or not tc_id:
-                    logger.warning("Malformed tool_call (type=%s): %s", type(tool_call).__name__, str(tool_call)[:200])
+                    logger.warning(
+                        "Malformed tool_call (type=%s): %s",
+                        type(tool_call).__name__, str(tool_call)[:200],
+                    )
                     continue
                 if tc_name == search_tool_name:
                     batch_searches += 1
@@ -221,6 +237,79 @@ class WebScraperAgent(LLMAgent):
         return batch_searches
 
     # ------------------------------------------------------------------
+    # Helper: phase-1 URL pattern filtering (no network)
+    # ------------------------------------------------------------------
+
+    def _filter_by_url_pattern(
+        self,
+        results: list[WebScraperResult],
+        category: str,
+    ) -> tuple[list[WebScraperResult], list[FilteredURL]]:
+        """Reject results whose URL matches a known directory/search pattern.
+
+        Returns (survivors, rejected_as_FilteredURL).
+        """
+        survivors: list[WebScraperResult] = []
+        rejected: list[FilteredURL] = []
+        for item in results:
+            if not item.url:
+                survivors.append(item)
+                continue
+            reason = _check_url_pattern(item.url, category)
+            if reason:
+                logger.info("%s rejected: %s -- %s", _cat_tag(category), item.url, reason)
+                rejected.append(FilteredURL(url=item.url, reason=reason))
+            else:
+                survivors.append(item)
+        return survivors, rejected
+
+    # ------------------------------------------------------------------
+    # Helper: phase-2 async fetch + content classification
+    # ------------------------------------------------------------------
+
+    async def _fetch_and_classify_urls(
+        self,
+        items: list[WebScraperResult],
+        category: str,
+        attempt_label: str = "",
+    ) -> tuple[list[WebScraperResult], list[WebScraperResult], list[FilteredURL]]:
+        """Fetch URLs and classify them as valid, rate-limited, or rejected.
+
+        Returns (valid, rate_limited, rejected_as_FilteredURL).
+        """
+        fetched: list[str | Exception] = []
+        for i in range(0, len(items), _FETCH_BATCH_SIZE):
+            batch = items[i:i + _FETCH_BATCH_SIZE]
+            batch_results = await asyncio.gather(
+                *[self._fetch_tool.ainvoke(item.url) for item in batch],
+                return_exceptions=True,
+            )
+            fetched.extend(batch_results)
+            if i + _FETCH_BATCH_SIZE < len(items):
+                await asyncio.sleep(_FETCH_BATCH_DELAY)
+
+        valid: list[WebScraperResult] = []
+        rate_limited: list[WebScraperResult] = []
+        rejected: list[FilteredURL] = []
+        for item, raw in zip(items, fetched):
+            if not item.url:
+                valid.append(item)
+                continue
+            reason = _check_fetched_content(category, raw)
+            if reason == "HTTP 429":
+                rate_limited.append(item)
+            elif reason:
+                logger.info(
+                    "%s rejected%s: %s -- %s",
+                    _cat_tag(category), attempt_label, item.url, reason,
+                )
+                rejected.append(FilteredURL(url=item.url, reason=reason))
+            else:
+                valid.append(item)
+                logger.info("%s valid%s: %s", _cat_tag(category), attempt_label, item.url)
+        return valid, rate_limited, rejected
+
+    # ------------------------------------------------------------------
     # Helper: validate URLs by fetching them and applying deterministic rules
     # ------------------------------------------------------------------
 
@@ -236,48 +325,14 @@ class WebScraperAgent(LLMAgent):
         if not self._fetch_tool or not results:
             return results, []
 
-        rejected: list[FilteredURL] = []
-
         # Phase 1: reject by URL pattern (no network needed)
-        pattern_survivors: list[WebScraperResult] = []
-        for item in results:
-            if not item.url:
-                pattern_survivors.append(item)
-                continue
-            reason = _check_url_pattern(item.url, category)
-            if reason:
-                logger.info("%s rejected: %s -- %s", _cat_tag(category), item.url, reason)
-                rejected.append(FilteredURL(url=item.url, reason=reason))
-            else:
-                pattern_survivors.append(item)
+        pattern_survivors, rejected = self._filter_by_url_pattern(results, category)
 
-        # Phase 2: fetch surviving URLs in small batches to avoid 429s
-        fetched: list[str | Exception] = []
-        for i in range(0, len(pattern_survivors), _FETCH_BATCH_SIZE):
-            batch = pattern_survivors[i:i + _FETCH_BATCH_SIZE]
-            batch_results = await asyncio.gather(
-                *[self._fetch_tool.ainvoke(item.url) for item in batch],
-                return_exceptions=True,
-            )
-            fetched.extend(batch_results)
-            if i + _FETCH_BATCH_SIZE < len(pattern_survivors):
-                await asyncio.sleep(_FETCH_BATCH_DELAY)
-
-        valid: list[WebScraperResult] = []
-        rate_limited: list[WebScraperResult] = []
-        for item, raw in zip(pattern_survivors, fetched):
-            if not item.url:
-                valid.append(item)
-                continue
-            reason = _check_fetched_content(item.url, category, raw)
-            if reason == "HTTP 429":
-                rate_limited.append(item)
-            elif reason:
-                logger.info("%s rejected: %s -- %s", _cat_tag(category), item.url, reason)
-                rejected.append(FilteredURL(url=item.url, reason=reason))
-            else:
-                valid.append(item)
-                logger.info("%s valid: %s", _cat_tag(category), item.url)
+        # Phase 2: fetch surviving URLs and classify
+        valid, rate_limited, fetch_rejected = await self._fetch_and_classify_urls(
+            pattern_survivors, category,
+        )
+        rejected.extend(fetch_rejected)
 
         # Retry 429s up to 3 times with increasing backoff
         for attempt in range(1, 4):
@@ -289,27 +344,11 @@ class WebScraperAgent(LLMAgent):
                 _cat_tag(category), len(rate_limited), attempt, backoff,
             )
             await asyncio.sleep(backoff)
-            retry_fetched: list[str | Exception] = []
-            for i in range(0, len(rate_limited), _FETCH_BATCH_SIZE):
-                batch = rate_limited[i:i + _FETCH_BATCH_SIZE]
-                batch_results = await asyncio.gather(
-                    *[self._fetch_tool.ainvoke(item.url) for item in batch],
-                    return_exceptions=True,
-                )
-                retry_fetched.extend(batch_results)
-                if i + _FETCH_BATCH_SIZE < len(rate_limited):
-                    await asyncio.sleep(_FETCH_BATCH_DELAY)
-            still_limited: list[WebScraperResult] = []
-            for item, raw in zip(rate_limited, retry_fetched):
-                reason = _check_fetched_content(item.url, category, raw)
-                if reason == "HTTP 429":
-                    still_limited.append(item)
-                elif reason:
-                    logger.info("%s rejected (attempt %d): %s -- %s", _cat_tag(category), attempt, item.url, reason)
-                    rejected.append(FilteredURL(url=item.url, reason=reason))
-                else:
-                    valid.append(item)
-                    logger.info("%s valid (attempt %d): %s", _cat_tag(category), attempt, item.url)
+            retry_valid, still_limited, retry_rejected = await self._fetch_and_classify_urls(
+                rate_limited, category, attempt_label=f" (attempt {attempt})",
+            )
+            valid.extend(retry_valid)
+            rejected.extend(retry_rejected)
             rate_limited = still_limited
 
         # Any still rate-limited after 3 retries are rejected
@@ -324,6 +363,47 @@ class WebScraperAgent(LLMAgent):
         return valid, rejected
 
     # ------------------------------------------------------------------
+    # Helper: nudge the LLM when it stops before reaching min_searches
+    # ------------------------------------------------------------------
+
+    async def _nudge_for_more_searches(
+        self,
+        messages: list,
+        category: str,
+        search_count: int,
+        min_searches: int,
+        llm_with_tools: Any,
+        usages: list[dict],
+    ) -> Any:
+        """Append a nudge message and re-invoke the LLM.
+
+        Returns the new LLM response (caller checks for tool_calls).
+        """
+        logger.info(
+            "%s nudging LLM: %d/%d searches done",
+            _cat_tag(category), search_count, min_searches,
+        )
+        messages.append({
+            "role": "user",
+            "content": (
+                f"You have only completed {search_count} out of "
+                f"{min_searches} required searches. You MUST continue "
+                f"searching with different query variations. Do not "
+                f"summarize or stop -- call the search tool now."
+            ),
+        })
+        response = await llm_with_tools.ainvoke(messages)
+        if getattr(response, "usage_metadata", None):
+            usages.append({**dict(response.usage_metadata), "model_name": self._model_name})
+        messages.append(response)
+        if not response.tool_calls:
+            logger.warning(
+                "%s LLM refused to continue after nudge "
+                "(%d/%d searches)", _cat_tag(category), search_count, min_searches,
+            )
+        return response
+
+    # ------------------------------------------------------------------
     # Helper: run the tool-calling loop until budget or minimums are met
     # ------------------------------------------------------------------
 
@@ -333,7 +413,6 @@ class WebScraperAgent(LLMAgent):
         messages: list,
         llm_with_tools: Any,
         tool_map: dict[str, Any],
-        model_name: str,
         usages: list[dict],
         category: str,
         max_steps: int,
@@ -351,28 +430,11 @@ class WebScraperAgent(LLMAgent):
             if not response.tool_calls:
                 if search_count >= min_searches or min_searches == 0:
                     break
-                logger.info(
-                    "%s nudging LLM: %d/%d searches done",
-                    _cat_tag(category), search_count, min_searches,
+                response = await self._nudge_for_more_searches(
+                    messages, category, search_count, min_searches,
+                    llm_with_tools, usages,
                 )
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        f"You have only completed {search_count} out of "
-                        f"{min_searches} required searches. You MUST continue "
-                        f"searching with different query variations. Do not "
-                        f"summarize or stop -- call the search tool now."
-                    ),
-                })
-                response = await llm_with_tools.ainvoke(messages)
-                if getattr(response, "usage_metadata", None):
-                    usages.append({**dict(response.usage_metadata), "model_name": model_name})
-                messages.append(response)
                 if not response.tool_calls:
-                    logger.warning(
-                        "%s LLM refused to continue after nudge "
-                        "(%d/%d searches)", _cat_tag(category), search_count, min_searches,
-                    )
                     break
 
             step += 1
@@ -381,10 +443,163 @@ class WebScraperAgent(LLMAgent):
             )
             response = await llm_with_tools.ainvoke(messages)
             if getattr(response, "usage_metadata", None):
-                usages.append({**dict(response.usage_metadata), "model_name": model_name})
+                usages.append({**dict(response.usage_metadata), "model_name": self._model_name})
             messages.append(response)
 
         return response, search_count, step
+
+    # ------------------------------------------------------------------
+    # Helper: parse structured output and deduplicate by URL
+    # ------------------------------------------------------------------
+
+    async def _parse_and_deduplicate(
+        self,
+        result_text: str,
+        seen_urls: set[str],
+        prompt: str,
+        usages: list[dict],
+    ) -> tuple[list[WebScraperResult], list[FilteredURL]]:
+        """Parse search results into structured output and deduplicate.
+
+        Returns (unique_results, filtered_urls). Updates *seen_urls* in place.
+        """
+        structured_input = (
+            f"Search for: {prompt}\n\nSearch results found:\n{result_text}"
+            if result_text
+            else prompt
+        )
+        result, structured_usage = await self._invoke_structured(
+            WebScraperOutput, _EXTRACTION_PROMPT, structured_input
+        )
+        if structured_usage:
+            usages.append(structured_usage)
+
+        unique: list[WebScraperResult] = []
+        filtered: list[FilteredURL] = list(result.filtered_urls)
+        for r in result.results:
+            if r.url and r.url in seen_urls:
+                filtered.append(FilteredURL(url=r.url, reason="duplicate URL"))
+            else:
+                if r.url:
+                    seen_urls.add(r.url)
+                unique.append(r)
+        return unique, filtered
+
+    # ------------------------------------------------------------------
+    # Helper: retry loop when insufficient valid results
+    # ------------------------------------------------------------------
+
+    async def _retry_insufficient_results(
+        self,
+        unique_results: list[WebScraperResult],
+        all_filtered: list[FilteredURL],
+        seen_urls: set[str],
+        messages: list[Any],
+        llm_with_tools: Any,
+        tool_map: dict[str, Any],
+        usages: list[dict],
+        category: str,
+        prompt: str,
+        min_results: int,
+        max_steps: int,
+        step: int,
+        search_count: int,
+    ) -> tuple[list[WebScraperResult], list[FilteredURL], int, int]:
+        """Keep searching until min_results are met or budget is exhausted.
+
+        Mutates *unique_results*, *all_filtered*, *seen_urls*.
+        Returns (unique_results, all_filtered, search_count, step).
+        """
+        result_retry = 0
+        while (
+            min_results
+            and len(unique_results) < min_results
+            and result_retry < 3
+            and step < max_steps
+            and llm_with_tools is not None
+        ):
+            result_retry += 1
+            logger.info(
+                "%s only %d/%d valid results, "
+                "continuing search (retry %d)",
+                _cat_tag(category), len(unique_results), min_results, result_retry,
+            )
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"You found only {len(unique_results)} valid results but "
+                    f"the minimum required is {min_results}. Search for more "
+                    f"with different query terms and job boards. Call the "
+                    f"search tool now."
+                ),
+            })
+            response = await llm_with_tools.ainvoke(messages)
+            if getattr(response, "usage_metadata", None):
+                usages.append({**dict(response.usage_metadata), "model_name": self._model_name})
+            messages.append(response)
+
+            if not response.tool_calls:
+                logger.warning(
+                    "%s LLM refused to search more "
+                    "(%d/%d results, retry %d)",
+                    _cat_tag(category), len(unique_results), min_results, result_retry,
+                )
+                break
+
+            # Continue the tool-calling loop
+            response, search_count, step = await self._run_tool_loop(
+                response, messages, llm_with_tools, tool_map,
+                usages, category, max_steps, 0,
+                step=step, search_count=search_count,
+            )
+            search_context = response.content or ""
+
+            # Re-parse and merge new results
+            new_unique, new_filtered = await self._parse_and_deduplicate(
+                search_context, seen_urls, prompt, usages,
+            )
+            all_filtered.extend(new_filtered)
+
+            # Validate new URLs via fetch
+            new_valid, new_rejected = await self._validate_urls(new_unique, category)
+            unique_results.extend(new_valid)
+            all_filtered.extend(new_rejected)
+
+        return unique_results, all_filtered, search_count, step
+
+    # ------------------------------------------------------------------
+    # Helper: assemble the final output dict
+    # ------------------------------------------------------------------
+
+    def _build_output(
+        self,
+        unique_results: list[WebScraperResult],
+        all_filtered: list[FilteredURL],
+        usages: list[dict],
+        category: str,
+        result_key: str,
+        search_count: int,
+        step: int,
+    ) -> dict[str, Any]:
+        """Log final statistics and return the output dict."""
+        tag = _cat_tag(category)
+        logger.info(
+            "%s final: %d valid results, %d filtered, "
+            "%d searches, %d steps",
+            tag, len(unique_results), len(all_filtered),
+            search_count, step,
+        )
+        for r in unique_results:
+            logger.info("%s  -> %s  %s", tag, r.title, r.url or "")
+
+        results = [r.model_dump() for r in unique_results]
+        filtered = [f.model_dump() for f in all_filtered]
+        output: dict[str, Any] = {result_key: results, "_token_usage": usages}
+        if filtered:
+            output[f"filtered_{category}_urls"] = filtered
+            for f in filtered:
+                logger.info("%s filtered %s: %s", tag, f["url"], f["reason"])
+        return output
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -428,7 +643,6 @@ class WebScraperAgent(LLMAgent):
 
             messages: list[Any] = []
             llm_with_tools = None
-            model_name = ""
             step = 0
             search_count = 0
 
@@ -438,15 +652,14 @@ class WebScraperAgent(LLMAgent):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ]
-                model_name = getattr(self._llm, "model_name", None) or getattr(self._llm, "model", "")
                 response = await llm_with_tools.ainvoke(messages)
                 if getattr(response, "usage_metadata", None):
-                    usages.append({**dict(response.usage_metadata), "model_name": model_name})
+                    usages.append({**dict(response.usage_metadata), "model_name": self._model_name})
                 messages.append(response)
 
                 response, search_count, step = await self._run_tool_loop(
                     response, messages, llm_with_tools, tool_map,
-                    model_name, usages, category, max_steps, min_searches,
+                    usages, category, max_steps, min_searches,
                 )
 
                 logger.info(
@@ -455,124 +668,31 @@ class WebScraperAgent(LLMAgent):
                 )
                 search_context = response.content or ""
 
-            # Parse the final response as structured output
-            structured_input = (
-                f"Search for: {prompt}\n\nSearch results found:\n{search_context}"
-                if search_context
-                else user_content
-            )
-            result, structured_usage = await self._invoke_structured(
-                WebScraperOutput, _EXTRACTION_PROMPT, structured_input
-            )
-            if structured_usage:
-                usages.append(structured_usage)
-
-            # Deduplicate by URL -- keep first occurrence, move dupes to filtered
+            # Parse and deduplicate
             seen_urls: set[str] = set()
-            unique_results: list[WebScraperResult] = []
-            all_filtered: list[FilteredURL] = list(result.filtered_urls)
-            for r in result.results:
-                if r.url and r.url in seen_urls:
-                    all_filtered.append(FilteredURL(url=r.url, reason="duplicate URL"))
-                else:
-                    if r.url:
-                        seen_urls.add(r.url)
-                    unique_results.append(r)
+            unique_results, all_filtered = await self._parse_and_deduplicate(
+                search_context, seen_urls, user_content, usages,
+            )
 
-            # ---- URL validation via fetch ----
+            # URL validation via fetch
             validated, rejected = await self._validate_urls(unique_results, category)
             unique_results = validated
             all_filtered.extend(rejected)
 
-            # ---- min_results enforcement ----
-            # If we don't have enough valid results and still have budget,
-            # nudge the LLM back into search mode and re-parse.
-            result_retry = 0
-            while (
-                min_results
-                and len(unique_results) < min_results
-                and result_retry < 3
-                and step < max_steps
-                and llm_with_tools is not None
-            ):
-                result_retry += 1
-                logger.info(
-                    "%s only %d/%d valid results, "
-                    "continuing search (retry %d)",
-                    _cat_tag(category), len(unique_results), min_results, result_retry,
+            # min_results enforcement
+            unique_results, all_filtered, search_count, step = (
+                await self._retry_insufficient_results(
+                    unique_results, all_filtered, seen_urls,
+                    messages, llm_with_tools, tool_map,
+                    usages, category, prompt,
+                    min_results, max_steps, step, search_count,
                 )
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        f"You found only {len(unique_results)} valid results but "
-                        f"the minimum required is {min_results}. Search for more "
-                        f"with different query terms and job boards. Call the "
-                        f"search tool now."
-                    ),
-                })
-                response = await llm_with_tools.ainvoke(messages)
-                if getattr(response, "usage_metadata", None):
-                    usages.append({**dict(response.usage_metadata), "model_name": model_name})
-                messages.append(response)
-
-                if not response.tool_calls:
-                    logger.warning(
-                        "%s LLM refused to search more "
-                        "(%d/%d results, retry %d)",
-                        _cat_tag(category), len(unique_results), min_results, result_retry,
-                    )
-                    break
-
-                # Continue the tool-calling loop
-                response, search_count, step = await self._run_tool_loop(
-                    response, messages, llm_with_tools, tool_map,
-                    model_name, usages, category, max_steps, 0,
-                    step=step, search_count=search_count,
-                )
-                search_context = response.content or ""
-
-                # Re-parse and merge new results
-                structured_input = (
-                    f"Search for: {prompt}\n\nSearch results found:\n{search_context}"
-                )
-                new_result, structured_usage = await self._invoke_structured(
-                    WebScraperOutput, _EXTRACTION_PROMPT, structured_input
-                )
-                if structured_usage:
-                    usages.append(structured_usage)
-                new_unique: list[WebScraperResult] = []
-                for r in new_result.results:
-                    if r.url and r.url in seen_urls:
-                        all_filtered.append(FilteredURL(url=r.url, reason="duplicate URL"))
-                    else:
-                        if r.url:
-                            seen_urls.add(r.url)
-                        new_unique.append(r)
-                all_filtered.extend(new_result.filtered_urls)
-
-                # Validate new URLs via fetch
-                new_valid, new_rejected = await self._validate_urls(new_unique, category)
-                unique_results.extend(new_valid)
-                all_filtered.extend(new_rejected)
-
-            tag = _cat_tag(category)
-            logger.info(
-                "%s final: %d valid results, %d filtered, "
-                "%d searches, %d steps",
-                tag, len(unique_results), len(all_filtered),
-                search_count, step,
             )
-            for r in unique_results:
-                logger.info("%s  -> %s  %s", tag, r.title, r.url or "")
 
-            results = [r.model_dump() for r in unique_results]
-            filtered = [f.model_dump() for f in all_filtered]
-            output: dict[str, Any] = {result_key: results, "_token_usage": usages}
-            if filtered:
-                output[f"filtered_{category}_urls"] = filtered
-                for f in filtered:
-                    logger.info("%s filtered %s: %s", tag, f["url"], f["reason"])
-            return output
+            return self._build_output(
+                unique_results, all_filtered, usages,
+                category, result_key, search_count, step,
+            )
 
         except Exception as exc:
             logger.exception("%s failed", _cat_tag(category))
@@ -601,7 +721,7 @@ def _check_url_pattern(url: str, category: str) -> str:
     return ""
 
 
-def _check_fetched_content(url: str, category: str, raw: Any) -> str:
+def _check_fetched_content(category: str, raw: Any) -> str:
     """Apply deterministic content rules to fetched page content."""
     if isinstance(raw, Exception):
         return f"fetch error: {raw}"

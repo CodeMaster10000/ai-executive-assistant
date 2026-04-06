@@ -1,6 +1,5 @@
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, NavLink } from "react-router-dom"
 import { Play, FileText, Briefcase, FileEdit, ChevronDown } from "lucide-react"
-import { NavLink } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useProfiles } from "@/contexts/ProfileContext"
 import {

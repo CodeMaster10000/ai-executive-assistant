@@ -42,8 +42,8 @@ function StepCard({ number, title, description, icon, details, link }: StepProps
       </CardHeader>
       <CardContent className="ml-11">
         <ul className="space-y-2 text-sm text-muted-foreground">
-          {details.map((detail, i) => (
-            <li key={i} className="flex items-start gap-2">
+          {details.map((detail) => (
+            <li key={detail} className="flex items-start gap-2">
               <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
               <span>{detail}</span>
             </li>

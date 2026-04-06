@@ -65,7 +65,7 @@ async def get_current_user_from_query(
     return user
 
 
-async def require_admin(
+def require_admin(
     user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     """Require the current user to have admin role."""

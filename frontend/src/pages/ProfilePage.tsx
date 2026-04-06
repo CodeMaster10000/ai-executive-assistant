@@ -29,6 +29,22 @@ const WORK_ARRANGEMENTS = ["remote", "hybrid", "onsite"]
 const EVENT_ATTENDANCES = ["local", "remote", "no preference"]
 const LEARNING_FORMATS = ["online", "in-person", "self-paced", "instructor-led"]
 
+function getValidationErrors(
+  name: string,
+  targets: string[],
+  skills: string[],
+  preferredTitles: string[],
+  hasCv: boolean
+): string[] {
+  const missing: string[] = []
+  if (!name.trim()) missing.push("a name")
+  if (targets.length === 0) missing.push("career goals")
+  if (skills.length === 0) missing.push("skills")
+  if (preferredTitles.length === 0) missing.push("preferred job titles")
+  if (!hasCv) missing.push("a CV")
+  return missing
+}
+
 export default function ProfilePage() {
   const { profileId } = useParams()
   const navigate = useNavigate()
@@ -72,44 +88,48 @@ export default function ProfilePage() {
   }
   profileRef.current = profile
 
+  function applyFormState(source: Record<string, unknown>) {
+    setName(source.name as string)
+    setTargets(source.targets as string[] ?? [])
+    setConstraints(source.constraints as string[] ?? [])
+    setSkills(source.skills as string[] ?? [])
+    setPreferredTitles(source.preferred_titles as string[] ?? [])
+    setExperienceLevel(source.experience_level as string ?? "")
+    setIndustries(source.industries as string[] ?? [])
+    setLocations(source.locations as string[] ?? [])
+    setWorkArrangement(source.work_arrangement as string ?? "")
+    setEventAttendance(source.event_attendance as string ?? "no preference")
+    setEventTopics(source.event_topics as string[] ?? [])
+    setTargetCertifications(source.target_certifications as string[] ?? [])
+    setLearningFormat(source.learning_format as string ?? "")
+  }
+
   const load = useCallback(() => {
     if (!profileId || !draftKey) return
     getProfile(profileId)
       .then((p) => {
         setProfile(p)
+        const fallback: Record<string, unknown> = {
+          name: p.name, targets: p.targets ?? [], constraints: p.constraints ?? [],
+          skills: p.skills ?? [], preferred_titles: p.preferred_titles ?? [],
+          experience_level: p.experience_level ?? "", industries: p.industries ?? [],
+          locations: p.locations ?? [], work_arrangement: p.work_arrangement ?? "",
+          event_attendance: p.event_attendance ?? "no preference",
+          event_topics: p.event_topics ?? [], target_certifications: p.target_certifications ?? [],
+          learning_format: p.learning_format ?? "",
+        }
         const raw = localStorage.getItem(draftKey)
         if (raw) {
           try {
             const draft = JSON.parse(raw)
-            setName(draft.name ?? p.name)
-            setTargets(draft.targets ?? p.targets ?? [])
-            setConstraints(draft.constraints ?? p.constraints ?? [])
-            setSkills(draft.skills ?? p.skills ?? [])
-            setPreferredTitles(draft.preferred_titles ?? p.preferred_titles ?? [])
-            setExperienceLevel(draft.experience_level ?? p.experience_level ?? "")
-            setIndustries(draft.industries ?? p.industries ?? [])
-            setLocations(draft.locations ?? p.locations ?? [])
-            setWorkArrangement(draft.work_arrangement ?? p.work_arrangement ?? "")
-            setEventAttendance(draft.event_attendance ?? p.event_attendance ?? "no preference")
-            setEventTopics(draft.event_topics ?? p.event_topics ?? [])
-            setTargetCertifications(draft.target_certifications ?? p.target_certifications ?? [])
-            setLearningFormat(draft.learning_format ?? p.learning_format ?? "")
+            const merged = Object.fromEntries(
+              Object.keys(fallback).map((k) => [k, draft[k] ?? fallback[k]])
+            )
+            applyFormState(merged)
             return
           } catch { /* ignore corrupt draft */ }
         }
-        setName(p.name)
-        setTargets(p.targets ?? [])
-        setConstraints(p.constraints ?? [])
-        setSkills(p.skills ?? [])
-        setPreferredTitles(p.preferred_titles ?? [])
-        setExperienceLevel(p.experience_level ?? "")
-        setIndustries(p.industries ?? [])
-        setLocations(p.locations ?? [])
-        setWorkArrangement(p.work_arrangement ?? "")
-        setEventAttendance(p.event_attendance ?? "no preference")
-        setEventTopics(p.event_topics ?? [])
-        setTargetCertifications(p.target_certifications ?? [])
-        setLearningFormat(p.learning_format ?? "")
+        applyFormState(fallback)
       })
       .finally(() => setLoading(false))
   }, [profileId, draftKey])
@@ -164,12 +184,7 @@ export default function ProfilePage() {
   async function handleSave() {
     if (!profileId) return
     if (!canSave()) {
-      const missing: string[] = []
-      if (!name.trim()) missing.push("a name")
-      if (targets.length === 0) missing.push("career goals")
-      if (skills.length === 0) missing.push("skills")
-      if (preferredTitles.length === 0) missing.push("preferred job titles")
-      if (!profile?.cv_filename) missing.push("a CV")
+      const missing = getValidationErrors(name, targets, skills, preferredTitles, !!profile?.cv_filename)
       toast.error(`Please add ${missing.join(", ")} before saving`)
       return
     }

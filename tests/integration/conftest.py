@@ -4,15 +4,11 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.auth.rate_limit import limiter
 from app.db import Base, get_db
 from app.main import app as fastapi_app
 
 # Import all models to register them with Base.metadata
 import app.models  # noqa: F401
-
-# Disable rate limiting in tests
-limiter.enabled = False
 
 TEST_DB_URL = "sqlite+aiosqlite://"
 

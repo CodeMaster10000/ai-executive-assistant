@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
 import type { UserRead } from "@/api/types"
 import type { LoginData, RegisterData } from "@/api/auth"
 import * as authApi from "@/api/auth"
@@ -70,8 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ? user.free_runs_used >= user.free_run_limit && !user.has_api_key && user.role !== "admin"
     : false
 
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout, refreshUser, isAdmin, needsApiKey }),
+    [user, loading, login, register, logout, refreshUser, isAdmin, needsApiKey],
+  )
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin, needsApiKey }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

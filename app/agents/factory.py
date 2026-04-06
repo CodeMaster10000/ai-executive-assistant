@@ -109,6 +109,42 @@ class AgentFactory:
             )
         return self._goal_extractor
 
+    def _resolve_single_budget(self, mode: str, cat: str) -> dict[str, int] | None:
+        """Resolve a single per-mode, per-category budget from the policy engine.
+
+        Tries the mode-specific budget name first (e.g. web_scraper_job_daily),
+        then falls back to the category-only name (e.g. web_scraper_job).
+        Returns None if neither budget exists.
+        """
+        for budget_name in (f"web_scraper_{cat}_{mode}", f"web_scraper_{cat}"):
+            try:
+                cb = self._policy_engine.get_budget(budget_name)
+                return {
+                    "max_steps": cb.max_steps,
+                    "min_searches": cb.min_searches,
+                    "min_results": cb.min_results,
+                }
+            except KeyError:
+                continue
+        return None
+
+    def _resolve_mode_category_budgets(self) -> dict[str, dict[str, int]]:
+        """Build per-mode + per-category budget overrides from the policy engine.
+
+        Keys: "{mode}:{category}" e.g. "daily:job", "weekly:event".
+        Falls back to web_scraper_{cat} if no mode-specific budget exists.
+        """
+        if not self._policy_engine:
+            return {}
+        result: dict[str, dict[str, int]] = {}
+        cats = ("job", "cert", "course", "event", "group", "trend")
+        for mode in ("daily", "weekly"):
+            for cat in cats:
+                resolved = self._resolve_single_budget(mode, cat)
+                if resolved is not None:
+                    result[f"{mode}:{cat}"] = resolved
+        return result
+
     def create_web_scraper(self) -> AgentProtocol:
         """Return the singleton WebScraperAgent, creating it on first call."""
         if self._web_scraper is None:
@@ -121,25 +157,7 @@ class AgentFactory:
                 except KeyError:
                     pass
 
-            # Per-mode + per-category budget overrides
-            # Keys: "{mode}:{category}" e.g. "daily:job", "weekly:event"
-            # Falls back to web_scraper_{cat} if no mode-specific budget exists
-            mode_category_budgets: dict[str, dict[str, int]] = {}
-            if self._policy_engine:
-                cats = ("job", "cert", "course", "event", "group", "trend")
-                for mode in ("daily", "weekly"):
-                    for cat in cats:
-                        for budget_name in (f"web_scraper_{cat}_{mode}", f"web_scraper_{cat}"):
-                            try:
-                                cb = self._policy_engine.get_budget(budget_name)
-                                mode_category_budgets[f"{mode}:{cat}"] = {
-                                    "max_steps": cb.max_steps,
-                                    "min_searches": cb.min_searches,
-                                    "min_results": cb.min_results,
-                                }
-                                break
-                            except KeyError:
-                                continue
+            mode_category_budgets = self._resolve_mode_category_budgets()
 
             self._web_scraper = WebScraperAgent(
                 llm=self._get_llm(

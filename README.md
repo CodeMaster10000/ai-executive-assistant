@@ -58,6 +58,8 @@ Trigger a daily, weekly, or cover letter run. Each run records a full audit trai
 
 The audit trail is append-only. You can see the `goal_extractor` parse your profile into search prompts, the `web_scrapers` fan out across sources, and every intermediate result along the way.
 
+**Token usage transparency:** The audit trail records exactly how many tokens each agent consumed and which model was used. Navigate to any run's detail page to see a per-agent breakdown of input/output tokens and costs, so you always know where your budget is going.
+
 ---
 
 ### Results: Jobs
@@ -298,6 +300,8 @@ uvicorn app.main:app --reload
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
 
+The API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI) and [http://localhost:8000/redoc](http://localhost:8000/redoc) (ReDoc).
+
 ### 8. Run tests
 
 ```bash
@@ -347,11 +351,7 @@ Agent behavior is governed by YAML policy files under `policy/`, not by informal
 
 ### Deterministic verifier
 
-The verifier is pure Python logic with zero LLM calls. It validates schema compliance, evidence coverage, confidence thresholds, deduplication, and output bounds. A failure is always explainable by reading the verifier report.
-
-### Evidence-first contract
-
-Every claim that references external information carries an `EvidenceItem` with a URL, SHA-256 content hash, and text snippet. Missing evidence causes a hard failure or explicit partial status. There are no silent gaps.
+The verifier is pure Python logic with zero LLM calls. It validates schema conformance, output bounds, title/URL deduplication, job freshness signals, and policy boundary compliance. Each agent has its own check suite dispatched by name. A failure is always explainable by reading the verifier report.
 
 ### Immutable audit trail
 
@@ -385,18 +385,18 @@ User-provided API keys are encrypted at rest using Fernet symmetric encryption. 
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Orchestration | LangGraph (StateGraph) + LangChain |
-| Backend | FastAPI + Pydantic v2 |
+| Layer | Technology                                              |
+|---|---------------------------------------------------------|
+| Orchestration | LangGraph (StateGraph) + LangChain                      |
+| Backend | FastAPI + Pydantic v2                                   |
 | Frontend | React + Vite + TypeScript + Tailwind CSS v4 + shadcn/ui |
-| Auth | JWT + Google OAuth + BYOK API key encryption |
-| Database | PostgreSQL + append-only JSONL |
-| Real-time | Server-Sent Events (SSE) |
-| Observability | LangSmith tracing (optional) |
-| Policies | YAML under `policy/` |
-| Deploy | Docker Compose (local) / Render (cloud) |
-| Testing | pytest + pytest-asyncio + in-memory SQLite |
+| Auth | JWT + Google OAuth + BYOK API key encryption            |
+| Database | PostgreSQL                      |
+| Real-time | Server-Sent Events (SSE)                                |
+| Observability | LangSmith tracing (optional) + Built-in Auditing        |
+| Policies | YAML under `policy/`                                    |
+| Deploy | Docker Compose (local) / Render (cloud)                 |
+| Testing | pytest + pytest-asyncio + in-memory SQLite              |
 
 ---
 

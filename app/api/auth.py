@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import CurrentUser
 from app.auth.oauth import exchange_google_code, get_google_auth_url
-from app.auth.rate_limit import limiter
 from app.config import settings
 from app.db import get_db
 from app.schemas.auth import (
@@ -27,10 +26,16 @@ from app.services import auth_service
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=201, response_model=TokenResponse)
-@limiter.limit("10/minute")
+@router.post(
+    "/register",
+    status_code=201,
+    response_model=TokenResponse,
+    responses={
+        409: {"description": "Email already registered"},
+        422: {"description": "Validation error"},
+    },
+)
 async def register(
-    request: Request,
     body: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -47,10 +52,12 @@ async def register(
     )
 
 
-@router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={401: {"description": "Invalid email or password"}},
+)
 async def login(
-    request: Request,
     body: LoginRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -65,10 +72,11 @@ async def login(
     )
 
 
-@router.post("/refresh")
-@limiter.limit("30/minute")
+@router.post(
+    "/refresh",
+    responses={401: {"description": "Invalid or expired refresh token"}},
+)
 async def refresh(
-    request: Request,
     body: RefreshRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -93,7 +101,10 @@ async def get_me(user: CurrentUser):
     return user_to_read(user)
 
 
-@router.get("/google")
+@router.get(
+    "/google",
+    responses={501: {"description": "Google OAuth not configured"}},
+)
 async def google_login(request: Request):
     if not settings.google_client_id:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
@@ -102,7 +113,10 @@ async def google_login(request: Request):
     return RedirectResponse(url)
 
 
-@router.get("/google/callback")
+@router.get(
+    "/google/callback",
+    responses={400: {"description": "Failed to authenticate with Google"}},
+)
 async def google_callback(
     request: Request,
     code: str,
@@ -114,7 +128,7 @@ async def google_callback(
     except Exception:
         raise HTTPException(status_code=400, detail="Failed to authenticate with Google")
 
-    user, access, refresh = await auth_service.google_login(db, google_info)
+    _, access, refresh = await auth_service.google_login(db, google_info)
 
     # Return an HTML page that stores tokens and redirects
     html = f"""<!DOCTYPE html>
@@ -130,7 +144,10 @@ window.location.href = '/';
     return HTMLResponse(html)
 
 
-@router.post("/verify-email")
+@router.post(
+    "/verify-email",
+    responses={400: {"description": "Invalid or expired verification token"}},
+)
 async def verify_email(
     body: VerifyEmailRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -143,9 +160,7 @@ async def verify_email(
 
 
 @router.post("/forgot-password")
-@limiter.limit("5/minute")
 async def forgot_password(
-    request: Request,
     body: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -153,7 +168,10 @@ async def forgot_password(
     return {"detail": "If an account with that email exists, a reset link has been sent."}
 
 
-@router.post("/reset-password")
+@router.post(
+    "/reset-password",
+    responses={400: {"description": "Invalid or expired reset token"}},
+)
 async def reset_password(
     body: ResetPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],

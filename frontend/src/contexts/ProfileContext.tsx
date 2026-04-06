@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { listProfiles } from "@/api/profiles"
 import type { Profile } from "@/api/types"
 
@@ -33,8 +33,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     refresh()
   }, [refresh])
 
+  const value = useMemo(
+    () => ({ profiles, loading, refresh }),
+    [profiles, loading, refresh],
+  )
+
   return (
-    <ProfileContext.Provider value={{ profiles, loading, refresh }}>
+    <ProfileContext.Provider value={value}>
       {children}
     </ProfileContext.Provider>
   )

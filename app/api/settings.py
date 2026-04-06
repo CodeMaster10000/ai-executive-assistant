@@ -27,7 +27,10 @@ async def get_api_key_status(user: CurrentUser) -> ApiKeyStatus:
     )
 
 
-@router.put("/settings/api-key")
+@router.put(
+    "/settings/api-key",
+    responses={422: {"description": "Invalid API key"}},
+)
 async def update_api_key(
     user: CurrentUser,
     body: ApiKeyUpdate,

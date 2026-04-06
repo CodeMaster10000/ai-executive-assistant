@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+_DEFAULT_EVENT_ATTENDANCE = "no preference"
+
 
 class ProfileCreate(BaseModel):
     """Request body for creating a new user profile workspace."""
@@ -16,7 +18,7 @@ class ProfileCreate(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = "no preference"
+    event_attendance: str | None = _DEFAULT_EVENT_ATTENDANCE
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -36,7 +38,7 @@ class ProfileUpdate(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = "no preference"
+    event_attendance: str | None = _DEFAULT_EVENT_ATTENDANCE
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -66,7 +68,7 @@ class ProfileRead(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = "no preference"
+    event_attendance: str | None = _DEFAULT_EVENT_ATTENDANCE
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None
@@ -88,7 +90,7 @@ class ProfileExport(BaseModel):
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
-    event_attendance: str | None = "no preference"
+    event_attendance: str | None = _DEFAULT_EVENT_ATTENDANCE
     event_topics: list[str] | None = None
     # Learning & Certification
     target_certifications: list[str] | None = None

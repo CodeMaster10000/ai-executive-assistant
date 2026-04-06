@@ -8,11 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-
 from app.api import profiles, runs, audit, results, cover_letters, policies, auth, admin, settings as user_settings
-from app.auth.rate_limit import limiter
 from app.config import settings as _settings
 from app.db import engine, Base
 from app.services.run_service import recover_orphaned_runs
@@ -84,10 +80,6 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="AI Executive Assistant Network", lifespan=lifespan)
-
-# Rate limiting
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
 _cors_origins = ["http://localhost:5173", _settings.app_base_url]

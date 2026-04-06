@@ -15,7 +15,11 @@ from app.services.profile_service import ExtractedSkills
 router = APIRouter(tags=["profiles"])
 
 
-@router.post("/profiles", status_code=201)
+@router.post(
+    "/profiles",
+    status_code=201,
+    responses={409: {"description": profile_name_exists}},
+)
 async def create_profile(
     body: ProfileCreate,
     user: CurrentUser,
@@ -56,7 +60,10 @@ async def get_profile(
 
 @router.put(
     "/profiles/{profile_id}",
-    responses={404: {"description": profile_not_found}},
+    responses={
+        404: {"description": profile_not_found},
+        409: {"description": profile_name_exists},
+    },
 )
 async def update_profile(
     _profile: VerifiedProfile,
@@ -106,7 +113,11 @@ async def export_profile(
     return result
 
 
-@router.post("/profiles/import", status_code=201)
+@router.post(
+    "/profiles/import",
+    status_code=201,
+    responses={409: {"description": profile_name_exists}},
+)
 async def import_profile(
     body: dict,
     user: CurrentUser,
@@ -121,7 +132,10 @@ async def import_profile(
 
 @router.post(
     "/profiles/{profile_id}/cv",
-    responses={404: {"description": profile_not_found}},
+    responses={
+        404: {"description": profile_not_found},
+        422: {"description": "Only PDF files are accepted"},
+    },
 )
 async def upload_cv(
     _profile: VerifiedProfile,

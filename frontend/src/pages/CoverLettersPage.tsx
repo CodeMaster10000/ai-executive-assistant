@@ -43,6 +43,11 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 
+function formatJobOption(title: string | null | undefined, company: string | null | undefined): string {
+  const label = title ?? "Unknown job"
+  return company ? `${label} at ${company}` : label
+}
+
 export default function CoverLettersPage() {
   const { profileId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -158,7 +163,7 @@ export default function CoverLettersPage() {
         .filter((cl) => cl.job_opportunity_id)
         .map((cl) => [
           cl.job_opportunity_id!,
-          `${cl.job_title ?? "Unknown job"}${cl.job_company ? ` at ${cl.job_company}` : ""}`,
+          formatJobOption(cl.job_title, cl.job_company),
         ])
     ).entries()
   )
@@ -350,21 +355,29 @@ export default function CoverLettersPage() {
                     </div>
                   </div>
                 </CardHeader>
-                {isGenerating ? (
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">Cover letter is being generated. This may take a moment.</p>
-                  </CardContent>
-                ) : expanded === cl.id ? (
-                  <CardContent>
-                    <div className="bg-muted rounded-md p-4 text-sm whitespace-pre-wrap">
-                      {cl.content}
-                    </div>
-                  </CardContent>
-                ) : (
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{cl.content}</p>
-                  </CardContent>
-                )}
+                {(() => {
+                  if (isGenerating) {
+                    return (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">Cover letter is being generated. This may take a moment.</p>
+                      </CardContent>
+                    )
+                  } else if (expanded === cl.id) {
+                    return (
+                      <CardContent>
+                        <div className="bg-muted rounded-md p-4 text-sm whitespace-pre-wrap">
+                          {cl.content}
+                        </div>
+                      </CardContent>
+                    )
+                  } else {
+                    return (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{cl.content}</p>
+                      </CardContent>
+                    )
+                  }
+                })()}
               </Card>
             )
           })}

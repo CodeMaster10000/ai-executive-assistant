@@ -23,6 +23,9 @@ from app.schemas.auth import LoginRequest, RegisterRequest
 
 logger = logging.getLogger(__name__)
 
+_ERR_INVALID_TOKEN_TYPE = "Invalid token type"
+_ERR_USER_NOT_FOUND = "User not found"
+
 
 def _hash_token(token: str) -> str:
     """SHA-256 hash of a refresh token for safe DB storage."""
@@ -109,7 +112,7 @@ async def refresh_tokens(db: AsyncSession, refresh_token: str) -> tuple[str, str
         raise ValueError("Invalid refresh token")
 
     if payload.get("type") != "refresh":
-        raise ValueError("Invalid token type")
+        raise ValueError(_ERR_INVALID_TOKEN_TYPE)
 
     token_hash = _hash_token(refresh_token)
     result = await db.execute(
@@ -129,7 +132,7 @@ async def refresh_tokens(db: AsyncSession, refresh_token: str) -> tuple[str, str
     user_result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = user_result.scalar_one_or_none()
     if user is None:
-        raise ValueError("User not found")
+        raise ValueError(_ERR_USER_NOT_FOUND)
 
     new_access = create_access_token(user.id, user.email, user.role)
     new_refresh = create_refresh_token(user.id)
@@ -203,12 +206,12 @@ async def verify_email(db: AsyncSession, token: str) -> None:
         raise ValueError("Invalid or expired verification token")
 
     if payload.get("type") != "email_verify":
-        raise ValueError("Invalid token type")
+        raise ValueError(_ERR_INVALID_TOKEN_TYPE)
 
     result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = result.scalar_one_or_none()
     if user is None:
-        raise ValueError("User not found")
+        raise ValueError(_ERR_USER_NOT_FOUND)
 
     user.email_verified = True
     await db.commit()
@@ -236,12 +239,12 @@ async def reset_password(db: AsyncSession, token: str, new_password: str) -> Non
         raise ValueError("Invalid or expired reset token")
 
     if payload.get("type") != "password_reset":
-        raise ValueError("Invalid token type")
+        raise ValueError(_ERR_INVALID_TOKEN_TYPE)
 
     result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = result.scalar_one_or_none()
     if user is None:
-        raise ValueError("User not found")
+        raise ValueError(_ERR_USER_NOT_FOUND)
 
     user.password_hash = hash_password(new_password)
     await db.commit()

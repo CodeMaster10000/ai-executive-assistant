@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.models.profile import UserProfile
+from app.config import settings
 from app.services.profile_service import ensure_cv_summary, upload_cv
 
 FAKE_CV_TEXT = "John Doe\nSenior Software Engineer\nPython, AWS, Docker"
@@ -68,7 +69,7 @@ async def test_ensure_cv_summary_generates_on_miss(db_session, client, admin_hea
         result = await ensure_cv_summary(db_session, profile)
 
     assert result == FAKE_SUMMARY
-    mock_summarize.assert_awaited_once_with(FAKE_CV_TEXT)
+    mock_summarize.assert_awaited_once_with(FAKE_CV_TEXT, settings.api_key)
     await db_session.refresh(profile)
     assert profile.cv_summary == FAKE_SUMMARY
     assert profile.cv_summary_hash == hashlib.sha256(FAKE_PDF_BYTES).hexdigest()

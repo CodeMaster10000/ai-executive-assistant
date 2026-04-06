@@ -263,7 +263,7 @@ async def ensure_cv_summary(db: AsyncSession, profile: UserProfile) -> str:
     try:
         from app.services.cover_letter_service import summarize_cv
 
-        summary = await summarize_cv(raw_text)
+        summary = await summarize_cv(raw_text, settings.api_key)
     except Exception:
         logger.warning(
             "LLM summarization failed for profile %s, using raw text", profile.id
