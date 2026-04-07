@@ -565,33 +565,40 @@ class TestResetPasswordRequestValidation:
 
 
 # ---------------------------------------------------------------------------
-# 8. app/schemas/profile.py -- preferred_titles validator (lines 50-52)
+# 8. app/schemas/profile.py -- preferred_title validator (lines 50-52)
 # ---------------------------------------------------------------------------
 
 
-class TestProfileUpdatePreferredTitlesValidator:
-    """Cover the preferred_titles_not_empty validator."""
+class TestProfileUpdatePreferredTitleValidator:
+    """Cover the preferred_title_not_empty validator."""
 
-    def test_empty_list_raises(self):
-        """Verify ProfileUpdate rejects an empty preferred_titles list."""
+    def test_empty_string_raises(self):
+        """Verify ProfileUpdate rejects an empty preferred_title string."""
         from app.schemas.profile import ProfileUpdate
 
-        with pytest.raises(ValidationError, match="preferred_titles cannot be empty"):
-            ProfileUpdate(preferred_titles=[])
+        with pytest.raises(ValidationError, match="preferred_title cannot be empty"):
+            ProfileUpdate(preferred_title="")
+
+    def test_whitespace_only_raises(self):
+        """Verify ProfileUpdate rejects a whitespace-only preferred_title."""
+        from app.schemas.profile import ProfileUpdate
+
+        with pytest.raises(ValidationError, match="preferred_title cannot be empty"):
+            ProfileUpdate(preferred_title="   ")
 
     def test_none_is_allowed(self):
-        """Verify ProfileUpdate allows None for preferred_titles (no update)."""
+        """Verify ProfileUpdate allows None for preferred_title (no update)."""
         from app.schemas.profile import ProfileUpdate
 
-        p = ProfileUpdate(preferred_titles=None)
-        assert p.preferred_titles is None
+        p = ProfileUpdate(preferred_title=None)
+        assert p.preferred_title is None
 
-    def test_non_empty_list_is_allowed(self):
-        """Verify ProfileUpdate accepts a non-empty preferred_titles list."""
+    def test_non_empty_string_is_allowed(self):
+        """Verify ProfileUpdate accepts a non-empty preferred_title string."""
         from app.schemas.profile import ProfileUpdate
 
-        p = ProfileUpdate(preferred_titles=["Engineer"])
-        assert p.preferred_titles == ["Engineer"]
+        p = ProfileUpdate(preferred_title="Engineer")
+        assert p.preferred_title == "Engineer"
 
 
 # ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ async def _create_complete_profile(client, db_session, headers, name="TestProfil
     """Create a profile with targets, skills, preferred titles, and a CV path so runs can start."""
     profile_resp = await client.post(
         "/api/profiles",
-        json={"name": name, "preferred_titles": ["Software Engineer"]},
+        json={"name": name, "preferred_title": "Software Engineer"},
         headers=headers,
     )
     profile_id = profile_resp.json()["id"]
@@ -21,7 +21,7 @@ async def _create_complete_profile(client, db_session, headers, name="TestProfil
     profile = await db_session.get(UserProfile, profile_id)
     profile.targets = json.dumps(["software engineer"])
     profile.skills = json.dumps(["python", "fastapi"])
-    profile.preferred_titles = json.dumps(["Software Engineer"])
+    profile.preferred_title = "Software Engineer"
     profile.cv_data = b"fake-pdf-content"
     profile.cv_filename = "cv.pdf"
     await db_session.commit()
@@ -60,7 +60,7 @@ async def test_create_run(client, db_session, admin_headers):
 async def test_create_run_incomplete_profile(client, admin_headers):
     """Creating a run on a profile with no targets/skills/titles/CV should fail."""
     profile_resp = await client.post(
-        "/api/profiles", json={"name": "Empty", "preferred_titles": ["Dev"]}, headers=admin_headers
+        "/api/profiles", json={"name": "Empty", "preferred_title": "Dev"}, headers=admin_headers
     )
     profile_id = profile_resp.json()["id"]
 
@@ -101,7 +101,7 @@ async def test_create_run_invalid_mode(client, admin_headers):
     """
     profile_resp = await client.post(
         "/api/profiles",
-        json={"name": "TestProfile", "preferred_titles": ["Dev"]},
+        json={"name": "TestProfile", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = profile_resp.json()["id"]
@@ -173,7 +173,7 @@ async def test_get_run_not_found(client, admin_headers):
     """
     profile_resp = await client.post(
         "/api/profiles",
-        json={"name": "TestProfile", "preferred_titles": ["Dev"]},
+        json={"name": "TestProfile", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = profile_resp.json()["id"]
@@ -194,7 +194,7 @@ async def test_get_run_wrong_profile(client, db_session, admin_headers):
     p1_id = await _create_complete_profile(client, db_session, admin_headers, "Profile1")
     p2 = await client.post(
         "/api/profiles",
-        json={"name": "Profile2", "preferred_titles": ["Dev"]},
+        json={"name": "Profile2", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     p2_id = p2.json()["id"]

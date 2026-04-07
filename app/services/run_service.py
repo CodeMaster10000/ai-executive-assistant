@@ -205,7 +205,7 @@ async def _load_profile(profile_id: str) -> dict[str, Any]:
             "profile_constraints": _parse_profile_constraints(profile),
             "cv_summary": cv_summary,
             # Structured profile fields
-            "preferred_titles": _parse_json_list(profile, "preferred_titles"),
+            "preferred_title": getattr(profile, "preferred_title", "") or "",
             "industries": _parse_json_list(profile, "industries"),
             "locations": _parse_json_list(profile, "locations"),
             "work_arrangement": getattr(profile, "work_arrangement", "") or "",
@@ -516,13 +516,13 @@ async def create_run(db: AsyncSession, profile_id: str, body: RunCreate, user: U
     missing: list[str] = []
     parsed_targets = _parse_profile_targets(profile)
     parsed_skills = _parse_profile_skills(profile)
-    parsed_titles = _parse_json_list(profile, "preferred_titles")
+    parsed_title = getattr(profile, "preferred_title", None)
     if not parsed_targets:
         missing.append("targets")
     if not parsed_skills:
         missing.append("skills")
-    if not parsed_titles:
-        missing.append("preferred job titles")
+    if not parsed_title:
+        missing.append("preferred job title")
     if not profile.cv_data:
         missing.append("a CV")
     if missing:

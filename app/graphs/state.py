@@ -18,7 +18,7 @@ class DailyState(TypedDict, total=False):
     run_id: str
 
     # Structured profile fields (all optional)
-    preferred_titles: list[str]
+    preferred_title: str
     industries: list[str]
     locations: list[str]
     work_arrangement: str
@@ -81,7 +81,7 @@ class WeeklyState(TypedDict, total=False):
     run_id: str
 
     # Structured profile fields (all optional)
-    preferred_titles: list[str]
+    preferred_title: str
     industries: list[str]
     locations: list[str]
     work_arrangement: str

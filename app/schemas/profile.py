@@ -15,7 +15,7 @@ class ProfileCreate(BaseModel):
     constraints: list[str] | None = None
     skills: list[str] | None = None
     # Career & Job
-    preferred_titles: list[str] | None = None
+    preferred_title: str | None = None
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
@@ -34,7 +34,7 @@ class ProfileUpdate(BaseModel):
     constraints: list[str] | None = None
     skills: list[str] | None = None
     # Career & Job
-    preferred_titles: list[str] | None = None
+    preferred_title: str | None = None
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
@@ -44,19 +44,12 @@ class ProfileUpdate(BaseModel):
     target_certifications: list[str] | None = None
     learning_format: str | None = None
 
-    @field_validator("preferred_titles")
+    @field_validator("preferred_title")
     @classmethod
-    def preferred_titles_not_empty(cls, v: list[str] | None) -> list[str] | None:
-        """Validate that preferred_titles is not set to an empty list.
-
-        Args:
-            v: The list of preferred job titles, or None if not provided.
-
-        Returns:
-            The validated list, unchanged, or None.
-        """
-        if v is not None and len(v) == 0:
-            raise ValueError("preferred_titles cannot be empty")
+    def preferred_title_not_empty(cls, v: str | None) -> str | None:
+        """Validate that preferred_title is not set to an empty string."""
+        if v is not None and not v.strip():
+            raise ValueError("preferred_title cannot be empty")
         return v
 
 
@@ -71,7 +64,7 @@ class ProfileRead(BaseModel):
     cv_filename: str | None = None
     has_cv_summary: bool = False
     # Career & Job
-    preferred_titles: list[str] | None = None
+    preferred_title: str | None = None
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None
@@ -92,7 +85,7 @@ class ProfileExport(BaseModel):
     constraints: list[str] | None = None
     skills: list[str] | None = None
     # Career & Job
-    preferred_titles: list[str] | None = None
+    preferred_title: str | None = None
     industries: list[str] | None = None
     locations: list[str] | None = None
     work_arrangement: str | None = None

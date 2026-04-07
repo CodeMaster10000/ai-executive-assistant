@@ -891,7 +891,7 @@ class TestRunServiceFreeTrial:
         profile = MagicMock()
         profile.targets = '["backend"]'
         profile.skills = '["python"]'
-        profile.preferred_titles = '["Engineer"]'
+        profile.preferred_title = "Engineer"
         profile.cv_data = b"pdf"
         db.get = AsyncMock(return_value=profile)
 

@@ -32,14 +32,14 @@ function getValidationErrors(
   name: string,
   targets: string[],
   skills: string[],
-  preferredTitles: string[],
+  preferredTitle: string,
   hasCv: boolean
 ): string[] {
   const missing: string[] = []
   if (!name.trim()) missing.push("a name")
   if (targets.length === 0) missing.push("career goals")
   if (skills.length === 0) missing.push("skills")
-  if (preferredTitles.length === 0) missing.push("preferred job titles")
+  if (!preferredTitle.trim()) missing.push("a preferred job title")
   if (!hasCv) missing.push("a CV")
   return missing
 }
@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const [constraints, setConstraints] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
   // Career & Job
-  const [preferredTitles, setPreferredTitles] = useState<string[]>([])
+  const [preferredTitle, setPreferredTitle] = useState("")
   const [industries, setIndustries] = useState<string[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [workArrangement, setWorkArrangement] = useState("")
@@ -73,14 +73,14 @@ export default function ProfilePage() {
   const profileRef = useRef<Profile | null>(null)
   const formRef = useRef({
     name, targets, constraints, skills,
-    preferred_titles: preferredTitles,
+    preferred_title: preferredTitle,
     industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
     event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
   })
   // Update refs synchronously every render (before any effects/cleanup)
   formRef.current = {
     name, targets, constraints, skills,
-    preferred_titles: preferredTitles,
+    preferred_title: preferredTitle,
     industries, locations, work_arrangement: workArrangement, event_attendance: eventAttendance,
     event_topics: eventTopics, target_certifications: targetCertifications, learning_format: learningFormat,
   }
@@ -91,7 +91,7 @@ export default function ProfilePage() {
     setTargets(source.targets as string[] ?? [])
     setConstraints(source.constraints as string[] ?? [])
     setSkills(source.skills as string[] ?? [])
-    setPreferredTitles(source.preferred_titles as string[] ?? [])
+    setPreferredTitle(source.preferred_title as string ?? "")
     setIndustries(source.industries as string[] ?? [])
     setLocations(source.locations as string[] ?? [])
     setWorkArrangement(source.work_arrangement as string ?? "")
@@ -108,7 +108,7 @@ export default function ProfilePage() {
         setProfile(p)
         const fallback: Record<string, unknown> = {
           name: p.name, targets: p.targets ?? [], constraints: p.constraints ?? [],
-          skills: p.skills ?? [], preferred_titles: p.preferred_titles ?? [],
+          skills: p.skills ?? [], preferred_title: p.preferred_title ?? "",
           industries: p.industries ?? [],
           locations: p.locations ?? [], work_arrangement: p.work_arrangement ?? "",
           event_attendance: p.event_attendance ?? "no preference",
@@ -137,7 +137,7 @@ export default function ProfilePage() {
   function buildSaved(p: Profile) {
     return {
       name: p.name, targets: p.targets ?? [], constraints: p.constraints ?? [], skills: p.skills ?? [],
-      preferred_titles: p.preferred_titles ?? [],
+      preferred_title: p.preferred_title ?? "",
       industries: p.industries ?? [], locations: p.locations ?? [], work_arrangement: p.work_arrangement ?? "",
       event_attendance: p.event_attendance ?? "no preference",
       event_topics: p.event_topics ?? [], target_certifications: p.target_certifications ?? [], learning_format: p.learning_format ?? "",
@@ -157,7 +157,7 @@ export default function ProfilePage() {
     } else {
       localStorage.removeItem(draftKey)
     }
-  }, [draftKey, name, targets, constraints, skills, preferredTitles, industries, locations, workArrangement, eventAttendance, eventTopics, targetCertifications, learningFormat, profile])
+  }, [draftKey, name, targets, constraints, skills, preferredTitle, industries, locations, workArrangement, eventAttendance, eventTopics, targetCertifications, learningFormat, profile])
 
   // Save draft on unmount so fast navigation doesn't lose changes
   useEffect(() => {
@@ -169,19 +169,19 @@ export default function ProfilePage() {
   }, [draftKey])
 
   function canSave() {
-    return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitles.length > 0 && !!profile?.cv_filename
+    return name.trim().length > 0 && targets.length > 0 && skills.length > 0 && preferredTitle.trim().length > 0 && !!profile?.cv_filename
   }
 
   async function handleSave() {
     if (!profileId) return
     if (!canSave()) {
-      const missing = getValidationErrors(name, targets, skills, preferredTitles, !!profile?.cv_filename)
+      const missing = getValidationErrors(name, targets, skills, preferredTitle, !!profile?.cv_filename)
       toast.error(`Please add ${missing.join(", ")} before saving`)
       return
     }
     const data: ProfileUpdate = {
       name, targets, constraints, skills,
-      preferred_titles: preferredTitles,
+      preferred_title: preferredTitle || null,
       industries: industries.length > 0 ? industries : null,
       locations: locations.length > 0 ? locations : null,
       work_arrangement: workArrangement || null,
@@ -396,14 +396,20 @@ export default function ProfilePage() {
         <div className="lg:col-span-2">
           <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Career & Job Preferences</h3>
         </div>
-        <TagCard
-          label="Preferred Job Titles"
-          items={preferredTitles}
-          onChange={setPreferredTitles}
-          placeholder="e.g. Staff Engineer, Engineering Manager"
-          examples={["Software Engineer", "Engineering Manager", "Data Scientist", "Product Manager"]}
-          required
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              Preferred Job Title <span className="text-destructive">*</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Input
+              value={preferredTitle}
+              onChange={(e) => setPreferredTitle(e.target.value)}
+              placeholder="e.g. Staff Engineer"
+            />
+          </CardContent>
+        </Card>
         <TagCard
           label="Industries"
           items={industries}

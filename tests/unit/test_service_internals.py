@@ -52,7 +52,7 @@ def _make_profile(
     cv_filename=None,
     cv_summary=None,
     cv_summary_hash=None,
-    preferred_titles='["Senior Engineer"]',
+    preferred_title="Senior Engineer",
     industries='["tech"]',
     locations='["US"]',
     work_arrangement="remote",
@@ -74,7 +74,7 @@ def _make_profile(
     p.cv_filename = cv_filename
     p.cv_summary = cv_summary
     p.cv_summary_hash = cv_summary_hash
-    p.preferred_titles = preferred_titles
+    p.preferred_title = preferred_title
     p.industries = industries
     p.locations = locations
     p.work_arrangement = work_arrangement
@@ -481,7 +481,7 @@ class TestExecuteRun:
             "profile_skills": ["Python"],
             "profile_constraints": [],
             "cv_summary": "A summary",
-            "preferred_titles": [],
+            "preferred_title": "",
             "industries": [],
             "locations": [],
             "work_arrangement": "",
@@ -607,7 +607,7 @@ class TestExecuteRun:
             "profile_skills": [],
             "profile_constraints": [],
             "cv_summary": "",
-            "preferred_titles": [],
+            "preferred_title": "",
             "industries": [],
             "locations": [],
             "work_arrangement": "",
@@ -684,7 +684,7 @@ class TestExecuteRun:
             "profile_skills": [],
             "profile_constraints": [],
             "cv_summary": "",
-            "preferred_titles": [],
+            "preferred_title": "",
             "industries": [],
             "locations": [],
             "work_arrangement": "",
@@ -1156,7 +1156,7 @@ class TestExportProfile:
             targets='["backend"]',
             constraints='["remote"]',
             skills='["Python"]',
-            preferred_titles='["Senior Eng"]',
+            preferred_title="Senior Eng",
             industries='["tech"]',
             locations='["US"]',
             work_arrangement="remote",

@@ -184,7 +184,7 @@ class TestProfileHappyPaths:
                 "name": "Export Me",
                 "targets": ["devops"],
                 "skills": ["terraform"],
-                "preferred_titles": ["SRE"],
+                "preferred_title": "SRE",
             },
             headers=admin_headers,
         )
@@ -197,7 +197,7 @@ class TestProfileHappyPaths:
         assert data["name"] == "Export Me"
         assert data["targets"] == ["devops"]
         assert data["skills"] == ["terraform"]
-        assert data["preferred_titles"] == ["SRE"]
+        assert data["preferred_title"] == "SRE"
 
     @pytest.mark.asyncio
     async def test_import_profile_success(self, client, admin_headers):
@@ -206,7 +206,7 @@ class TestProfileHappyPaths:
             "name": "Imported Profile",
             "targets": ["cloud"],
             "skills": ["aws", "gcp"],
-            "preferred_titles": ["Cloud Architect"],
+            "preferred_title": "Cloud Architect",
         }
         resp = await client.post("/api/profiles/import", json=payload, headers=admin_headers)
         assert resp.status_code == 201
@@ -219,7 +219,7 @@ class TestProfileHappyPaths:
     @pytest.mark.asyncio
     async def test_import_profile_duplicate_name_409(self, client, admin_headers):
         """Importing a profile with a duplicate name returns 409."""
-        payload = {"name": "DuplicateImport", "preferred_titles": ["Dev"]}
+        payload = {"name": "DuplicateImport", "preferred_title": "Dev"}
         resp1 = await client.post("/api/profiles/import", json=payload, headers=admin_headers)
         assert resp1.status_code == 201
 
@@ -235,7 +235,7 @@ class TestProfileHappyPaths:
                 "name": "RoundTrip",
                 "targets": ["backend"],
                 "skills": ["python"],
-                "preferred_titles": ["Backend Dev"],
+                "preferred_title": "Backend Dev",
                 "industries": ["fintech"],
                 "locations": ["remote"],
                 "work_arrangement": "remote",
@@ -259,7 +259,7 @@ class TestProfileHappyPaths:
         """Uploading a file named .pdf stores the CV and returns profile."""
         create = await client.post(
             "/api/profiles",
-            json={"name": "CV Upload Test", "preferred_titles": ["Dev"]},
+            json={"name": "CV Upload Test", "preferred_title": "Dev"},
             headers=admin_headers,
         )
         pid = create.json()["id"]
@@ -279,12 +279,12 @@ class TestProfileHappyPaths:
         """Renaming a profile to an existing name returns 409."""
         await client.post(
             "/api/profiles",
-            json={"name": "Name A", "preferred_titles": ["Dev"]},
+            json={"name": "Name A", "preferred_title": "Dev"},
             headers=admin_headers,
         )
         create_b = await client.post(
             "/api/profiles",
-            json={"name": "Name B", "preferred_titles": ["Dev"]},
+            json={"name": "Name B", "preferred_title": "Dev"},
             headers=admin_headers,
         )
         pid_b = create_b.json()["id"]
@@ -301,7 +301,7 @@ class TestProfileHappyPaths:
         """extract-skills returns 400 when profile has no CV uploaded."""
         create = await client.post(
             "/api/profiles",
-            json={"name": "No CV Prof", "preferred_titles": ["Dev"]},
+            json={"name": "No CV Prof", "preferred_title": "Dev"},
             headers=admin_headers,
         )
         pid = create.json()["id"]

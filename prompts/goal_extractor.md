@@ -35,7 +35,7 @@ Given the user's profile targets (career goals), constraints, and optionally the
 
 ### event_prompt
 - If **event topics** are set, use ONLY those topics to generate the event_prompt. Ignore career goals, job titles, and industries for the event prompt in this case.
-- If event topics are NOT set, fall back to **career goals**, **preferred job titles**, and **target industries**.
+- If event topics are NOT set, fall back to **career goals**, **preferred job title**, and **target industries**.
 - **Location rules by attendance preference**:
   - If event attendance is "local": search for in-person events near the user's preferred locations. This is the ONLY case where locations appear in the event prompt.
   - If event attendance is "remote": search for virtual/online events only. Do NOT mention locations.
@@ -43,14 +43,14 @@ Given the user's profile targets (career goals), constraints, and optionally the
 - Do NOT include skills in the event prompt. Do NOT factor in learning budget, learning format, or time commitment.
 
 ### group_prompt
-The group prompt should focus on the user's career goals and preferred job titles. If **target industries** are set, include them in the group prompt to find industry-specific communities. If no industries are set, fall back to the user's **preferred job titles** to find role-specific communities.
+The group prompt should focus on the user's career goals and preferred job title. If **target industries** are set, include them in the group prompt to find industry-specific communities. If no industries are set, fall back to the user's **preferred job title** to find role-specific communities.
 
 ## Structured Profile Fields
 
 When the user provides structured profile fields, use them as hard constraints:
 
 ### Career & Job Fields
-- **Preferred job titles**: These are provided for context (e.g., to inform trend, event, and group prompts). Job search is handled separately.
+- **Preferred job title**: This is provided for context (e.g., to inform trend, event, and group prompts). Job search is handled separately.
 - **Target industries**: Focus cert_prompt, course_prompt, and trend_prompt on these industries. For group_prompt, include industries to find industry-specific communities. For event_prompt, find industry-relevant events.
 - **Preferred locations**: Only include in event_prompt when event attendance is "local". Do NOT include in cert_prompt, course_prompt, group_prompt, or trend_prompt.
 - **Event attendance**: Controls event_prompt format preference (see Category-Specific Rules above).
@@ -73,7 +73,7 @@ When the user provides structured profile fields, use them as hard constraints:
 
 ### Example 2 (with structured fields and event topics)
 **Profile targets**: ["Transition to AI/ML engineering", "Find a senior Python role"]
-**Preferred job titles**: ["Senior ML Engineer", "AI Platform Engineer"]
+**Preferred job title**: "Senior ML Engineer"
 **Target industries**: ["fintech", "AI/ML"]
 **Preferred locations**: ["Berlin"]
 **Event attendance**: remote

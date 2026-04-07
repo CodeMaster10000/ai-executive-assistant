@@ -314,7 +314,7 @@ class TestGoalExtractorAgent:
 
     def test_build_job_prompt_basic(self):
         prompt = GoalExtractorAgent._build_job_prompt(
-            preferred_titles=["Software Engineer"],
+            preferred_title="Software Engineer",
         )
         assert "Software Engineer" in prompt
         assert "job openings" in prompt
@@ -322,13 +322,13 @@ class TestGoalExtractorAgent:
 
     def test_build_job_prompt_with_all_fields(self):
         prompt = GoalExtractorAgent._build_job_prompt(
-            preferred_titles=["Data Scientist", "ML Engineer"],
+            preferred_title="Data Scientist",
             industries=["tech", "finance"],
             locations=["New York", "London"],
             work_arrangement="hybrid",
             constraints=["No travel", "Visa sponsorship"],
         )
-        assert "Data Scientist and ML Engineer" in prompt
+        assert "Data Scientist" in prompt
         assert "tech and finance" in prompt
         assert "New York, London" in prompt
         assert "no travel" in prompt
@@ -336,7 +336,7 @@ class TestGoalExtractorAgent:
 
     def test_build_job_prompt_remote_excludes_location(self):
         prompt = GoalExtractorAgent._build_job_prompt(
-            preferred_titles=["Developer"],
+            preferred_title="Developer",
             locations=["SF"],
             work_arrangement="remote",
         )
@@ -345,7 +345,7 @@ class TestGoalExtractorAgent:
 
     def test_build_job_prompt_no_constraints(self):
         prompt = GoalExtractorAgent._build_job_prompt(
-            preferred_titles=["Analyst"],
+            preferred_title="Analyst",
         )
         assert "with" not in prompt
 
@@ -366,7 +366,7 @@ class TestGoalExtractorAgent:
             mock_invoke.return_value = (parsed, usage)
             state = {
                 "profile_targets": ["become ML engineer"],
-                "preferred_titles": ["ML Engineer"],
+                "preferred_title": "ML Engineer",
             }
             result = await agent(state)
 
@@ -392,7 +392,7 @@ class TestGoalExtractorAgent:
 
         with patch.object(agent, "_invoke_structured", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = (parsed, None)
-            result = await agent({"preferred_titles": ["Dev"]})
+            result = await agent({"preferred_title": "Dev"})
 
         assert result["_token_usage"] == []
 
@@ -411,7 +411,7 @@ class TestGoalExtractorAgent:
         with patch.object(agent, "_invoke_structured", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = (parsed, None)
             state = {
-                "preferred_titles": ["Eng"],
+                "preferred_title": "Eng",
                 "cv_summary": "Experienced developer with 10 years",
                 "profile_constraints": ["No relocation"],
                 "industries": ["tech"],

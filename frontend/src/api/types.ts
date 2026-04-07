@@ -5,7 +5,7 @@ export interface ProfileCreate {
   targets?: string[] | null
   constraints?: string[] | null
   skills?: string[] | null
-  preferred_titles?: string[] | null
+  preferred_title?: string | null
   industries?: string[] | null
   locations?: string[] | null
   work_arrangement?: string | null
@@ -20,7 +20,7 @@ export interface ProfileUpdate {
   targets?: string[] | null
   constraints?: string[] | null
   skills?: string[] | null
-  preferred_titles?: string[] | null
+  preferred_title?: string | null
   industries?: string[] | null
   locations?: string[] | null
   work_arrangement?: string | null
@@ -37,7 +37,7 @@ export interface Profile {
   constraints: string[] | null
   skills: string[] | null
   cv_filename: string | null
-  preferred_titles: string[] | null
+  preferred_title: string | null
   industries: string[] | null
   locations: string[] | null
   work_arrangement: string | null

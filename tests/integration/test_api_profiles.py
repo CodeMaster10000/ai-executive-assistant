@@ -17,7 +17,7 @@ async def test_create_profile(client, admin_headers):
             "name": "Architect",
             "targets": ["cloud", "infra"],
             "skills": ["aws"],
-            "preferred_titles": ["Cloud Architect"],
+            "preferred_title": "Cloud Architect",
         },
         headers=admin_headers,
     )
@@ -42,7 +42,7 @@ async def test_create_profile_minimal(client, admin_headers):
     """
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Developer", "preferred_titles": ["Developer"]},
+        json={"name": "Developer", "preferred_title": "Developer"},
         headers=admin_headers,
     )
     assert resp.status_code == 201
@@ -60,7 +60,7 @@ async def test_create_profile_missing_name(client, admin_headers):
         admin_headers: Auth headers for the admin user.
     """
     resp = await client.post(
-        "/api/profiles", json={"preferred_titles": ["Dev"]}, headers=admin_headers
+        "/api/profiles", json={"preferred_title": "Dev"}, headers=admin_headers
     )
     assert resp.status_code == 422
 
@@ -74,7 +74,7 @@ async def test_create_profile_empty_name(client, admin_headers):
         admin_headers: Auth headers for the admin user.
     """
     resp = await client.post(
-        "/api/profiles", json={"name": "", "preferred_titles": ["Dev"]}, headers=admin_headers
+        "/api/profiles", json={"name": "", "preferred_title": "Dev"}, headers=admin_headers
     )
     assert resp.status_code == 422
 
@@ -89,7 +89,7 @@ async def test_create_profile_name_too_long(client, admin_headers):
     """
     resp = await client.post(
         "/api/profiles",
-        json={"name": "x" * 201, "preferred_titles": ["Dev"]},
+        json={"name": "x" * 201, "preferred_title": "Dev"},
         headers=admin_headers,
     )
     assert resp.status_code == 422
@@ -104,10 +104,10 @@ async def test_list_profiles(client, admin_headers):
         admin_headers: Auth headers for the admin user.
     """
     await client.post(
-        "/api/profiles", json={"name": "Alpha", "preferred_titles": ["Dev"]}, headers=admin_headers
+        "/api/profiles", json={"name": "Alpha", "preferred_title": "Dev"}, headers=admin_headers
     )
     await client.post(
-        "/api/profiles", json={"name": "Beta", "preferred_titles": ["Dev"]}, headers=admin_headers
+        "/api/profiles", json={"name": "Beta", "preferred_title": "Dev"}, headers=admin_headers
     )
     resp = await client.get("/api/profiles", headers=admin_headers)
     assert resp.status_code == 200
@@ -127,7 +127,7 @@ async def test_get_profile(client, admin_headers):
     """
     create_resp = await client.post(
         "/api/profiles",
-        json={"name": "Architect", "skills": ["python"], "preferred_titles": ["Architect"]},
+        json={"name": "Architect", "skills": ["python"], "preferred_title": "Architect"},
         headers=admin_headers,
     )
     profile_id = create_resp.json()["id"]
@@ -159,7 +159,7 @@ async def test_update_profile(client, admin_headers):
     """
     create_resp = await client.post(
         "/api/profiles",
-        json={"name": "Old Name", "targets": ["a"], "preferred_titles": ["Dev"]},
+        json={"name": "Old Name", "targets": ["a"], "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = create_resp.json()["id"]
@@ -201,7 +201,7 @@ async def test_delete_profile(client, admin_headers):
     """
     create_resp = await client.post(
         "/api/profiles",
-        json={"name": "ToDelete", "preferred_titles": ["Dev"]},
+        json={"name": "ToDelete", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = create_resp.json()["id"]
@@ -230,7 +230,7 @@ async def test_update_profile_partial(client, admin_headers):
     """Only the fields provided in the update body are changed."""
     create_resp = await client.post(
         "/api/profiles",
-        json={"name": "Original", "targets": ["t1"], "skills": ["s1"], "preferred_titles": ["Dev"]},
+        json={"name": "Original", "targets": ["t1"], "skills": ["s1"], "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = create_resp.json()["id"]

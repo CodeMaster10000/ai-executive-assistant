@@ -28,7 +28,7 @@ class UserProfile(Base):
     cv_summary_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Career & Job
-    preferred_titles: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preferred_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     industries: Mapped[str | None] = mapped_column(Text, nullable=True)
     locations: Mapped[str | None] = mapped_column(Text, nullable=True)
     work_arrangement: Mapped[str | None] = mapped_column(String(20), nullable=True)

@@ -20,7 +20,7 @@ async def test_upload_cv_invalidates_summary(client, admin_headers, db_session):
     # Create profile
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -46,7 +46,7 @@ async def test_ensure_cv_summary_generates_on_miss(db_session, client, admin_hea
     """ensure_cv_summary should call LLM and cache when no summary exists."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -80,7 +80,7 @@ async def test_ensure_cv_summary_returns_cached(db_session, client, admin_header
     """ensure_cv_summary should return cached value without calling LLM."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -107,7 +107,7 @@ async def test_ensure_cv_summary_regenerates_on_stale_hash(db_session, client, a
     """ensure_cv_summary should regenerate when cv_data hash no longer matches."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -143,7 +143,7 @@ async def test_ensure_cv_summary_falls_back_on_llm_failure(db_session, client, a
     """If LLM fails, ensure_cv_summary should fall back to raw extracted text."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -175,7 +175,7 @@ async def test_ensure_cv_summary_empty_when_no_cv(db_session, client, admin_head
     """ensure_cv_summary should return empty string when no CV is uploaded."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]
@@ -191,7 +191,7 @@ async def test_has_cv_summary_in_profile_response(client, admin_headers, db_sess
     """ProfileRead should include has_cv_summary field."""
     resp = await client.post(
         "/api/profiles",
-        json={"name": "Test", "preferred_titles": ["Dev"]},
+        json={"name": "Test", "preferred_title": "Dev"},
         headers=admin_headers,
     )
     profile_id = resp.json()["id"]

@@ -48,7 +48,7 @@ def _make_profile(
     cv_filename=None,
     cv_summary=None,
     cv_summary_hash=None,
-    preferred_titles='["Senior Engineer"]',
+    preferred_title="Senior Engineer",
     industries='["tech"]',
     locations='["US"]',
     work_arrangement="remote",
@@ -71,7 +71,7 @@ def _make_profile(
     p.cv_filename = cv_filename
     p.cv_summary = cv_summary
     p.cv_summary_hash = cv_summary_hash
-    p.preferred_titles = preferred_titles
+    p.preferred_title = preferred_title
     p.industries = industries
     p.locations = locations
     p.work_arrangement = work_arrangement
@@ -293,13 +293,13 @@ class TestParseJsonList:
     def test_parses_valid_list(self):
         from app.services.run_service import _parse_json_list
 
-        profile = _make_profile(preferred_titles='["A","B"]')
-        assert _parse_json_list(profile, "preferred_titles") == ["A", "B"]
+        profile = _make_profile(preferred_title="A")
+        assert profile.preferred_title == "A"
 
     def test_returns_empty_for_none_profile(self):
         from app.services.run_service import _parse_json_list
 
-        assert _parse_json_list(None, "preferred_titles") == []
+        assert _parse_json_list(None, "industries") == []
 
     def test_returns_empty_for_missing_field(self):
         from app.services.run_service import _parse_json_list
@@ -310,8 +310,8 @@ class TestParseJsonList:
     def test_returns_empty_for_invalid_json(self):
         from app.services.run_service import _parse_json_list
 
-        profile = _make_profile(preferred_titles="not json")
-        assert _parse_json_list(profile, "preferred_titles") == []
+        profile = _make_profile(industries="not json")
+        assert _parse_json_list(profile, "industries") == []
 
 
 class TestListAllRuns:
@@ -406,7 +406,7 @@ class TestCreateRun:
         from app.services.run_service import create_run
 
         db = _mock_db()
-        profile = _make_profile(targets=None, skills=None, preferred_titles=None, cv_data=None)
+        profile = _make_profile(targets=None, skills=None, preferred_title=None, cv_data=None)
         db.get.return_value = profile
         user = _make_user(role="admin")
         body = RunCreate(mode="daily")
@@ -1857,7 +1857,7 @@ class TestCreateProfile:
             obj.skills = None
             obj.cv_filename = None
             obj.cv_summary = None
-            obj.preferred_titles = None
+            obj.preferred_title = None
             obj.industries = None
             obj.locations = None
             obj.work_arrangement = None
