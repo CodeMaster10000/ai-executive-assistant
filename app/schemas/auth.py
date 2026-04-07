@@ -1,3 +1,5 @@
+"""Authentication and user identity schemas for registration, login, and token management."""
+
 import re
 from datetime import datetime
 
@@ -5,6 +7,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
+    """Request body for new user registration.
+
+    Use this schema to validate registration form submissions. Password strength
+    rules are enforced via a field validator requiring mixed case and digits.
+    """
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
@@ -13,6 +20,14 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
+        """Validate that the password meets minimum strength requirements.
+
+        Args:
+            v: The raw password string to validate.
+
+        Returns:
+            The validated password string, unchanged.
+        """
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not re.search(r"[a-z]", v):
@@ -23,11 +38,18 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """Request body for user login with email and password credentials."""
     email: EmailStr
     password: str
 
 
 class UserRead(BaseModel):
+    """Read-only representation of an authenticated user returned by the API.
+
+    Use this schema for returning user profile data after login, registration,
+    or token refresh. Includes BYOK (bring your own key) and free-tier fields.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -44,6 +66,7 @@ class UserRead(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """Response body containing access and refresh tokens after successful authentication."""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -51,20 +74,35 @@ class TokenResponse(BaseModel):
 
 
 class RefreshRequest(BaseModel):
+    """Request body for refreshing an expired access token using a refresh token."""
     refresh_token: str
 
 
 class ForgotPasswordRequest(BaseModel):
+    """Request body for initiating a password reset flow via email."""
     email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
+    """Request body for completing a password reset with a token and new password.
+
+    Use this schema to validate password reset submissions. Password strength
+    rules are enforced via a field validator requiring mixed case and digits.
+    """
     token: str
     password: str = Field(..., min_length=8, max_length=128)
 
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
+        """Validate that the new password meets minimum strength requirements.
+
+        Args:
+            v: The raw password string to validate.
+
+        Returns:
+            The validated password string, unchanged.
+        """
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not re.search(r"[a-z]", v):
@@ -75,6 +113,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 class VerifyEmailRequest(BaseModel):
+    """Request body for verifying a user's email address using a verification token."""
     token: str
 
 

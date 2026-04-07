@@ -18,16 +18,40 @@ from app.engine.replay import ReplayEngine
 
 @pytest.fixture()
 def writer(test_session_factory) -> AuditWriter:
+    """Create an AuditWriter backed by the test database.
+
+    Args:
+        test_session_factory: Session factory fixture providing the test DB.
+
+    Returns:
+        AuditWriter: A writer ready for testing.
+    """
     return AuditWriter()
 
 
 @pytest.fixture()
 def replay_engine(writer: AuditWriter) -> ReplayEngine:
+    """Create a ReplayEngine wired to the test AuditWriter.
+
+    Args:
+        writer: The AuditWriter fixture.
+
+    Returns:
+        ReplayEngine: A replay engine for testing strict and refresh replays.
+    """
     return ReplayEngine(audit_writer=writer)
 
 
 @pytest.fixture()
 def diff_engine(writer: AuditWriter) -> DiffEngine:
+    """Create a DiffEngine wired to the test AuditWriter.
+
+    Args:
+        writer: The AuditWriter fixture.
+
+    Returns:
+        DiffEngine: A diff engine for comparing run bundles.
+    """
     return DiffEngine(audit_writer=writer)
 
 
@@ -67,6 +91,8 @@ async def _make_bundle(
 
 
 class TestReplayStrict:
+    """Tests for strict replay mode which uses stored tool responses."""
+
     @pytest.mark.asyncio
     async def test_returns_same_artifacts_as_original(
         self, writer: AuditWriter, replay_engine: ReplayEngine
@@ -95,6 +121,8 @@ class TestReplayStrict:
 
 
 class TestReplayRefresh:
+    """Tests for refresh replay mode which re-fetches and detects drift."""
+
     @pytest.mark.asyncio
     async def test_no_drift_when_identical(
         self, writer: AuditWriter, replay_engine: ReplayEngine
@@ -165,6 +193,8 @@ class TestReplayRefresh:
 
 
 class TestDiffIdentical:
+    """Tests for diff output when both runs have identical artifacts."""
+
     @pytest.mark.asyncio
     async def test_no_changes_for_identical_runs(
         self, writer: AuditWriter, diff_engine: DiffEngine
@@ -184,6 +214,8 @@ class TestDiffIdentical:
 
 
 class TestDiffAdditionsRemovals:
+    """Tests for detecting additions, removals, and changes between two runs."""
+
     @pytest.mark.asyncio
     async def test_detects_additions(
         self, writer: AuditWriter, diff_engine: DiffEngine
@@ -242,6 +274,8 @@ class TestDiffAdditionsRemovals:
 
 
 class TestDiffErrors:
+    """Tests for diff error handling when runs do not exist."""
+
     @pytest.mark.asyncio
     async def test_nonexistent_run_a_raises(
         self, writer: AuditWriter, diff_engine: DiffEngine
@@ -260,6 +294,8 @@ class TestDiffErrors:
 
 
 class TestDiffSummary:
+    """Tests for the diff summary item counts."""
+
     @pytest.mark.asyncio
     async def test_item_counts(
         self, writer: AuditWriter, diff_engine: DiffEngine

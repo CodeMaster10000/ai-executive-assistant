@@ -1,3 +1,13 @@
+"""Shared fixtures for integration tests.
+
+Provides:
+    db_engine -- async SQLAlchemy engine backed by an in-memory SQLite database.
+    db_session -- async database session bound to the test engine.
+    client -- httpx AsyncClient wired to the FastAPI app with the test DB override.
+    admin_headers -- Authorization headers for an auto-admin user.
+    auth_headers -- Authorization headers for a regular (non-admin) user.
+"""
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
@@ -15,6 +25,11 @@ TEST_DB_URL = "sqlite+aiosqlite://"
 
 @pytest_asyncio.fixture
 async def db_engine():
+    """Create an in-memory SQLite async engine with all tables, then tear down after the test.
+
+    Returns:
+        AsyncEngine: A fully-initialised async SQLAlchemy engine.
+    """
     engine = create_async_engine(
         TEST_DB_URL,
         echo=False,
@@ -31,6 +46,14 @@ async def db_engine():
 
 @pytest_asyncio.fixture
 async def db_session(db_engine):
+    """Yield an async database session scoped to a single test.
+
+    Args:
+        db_engine: The async engine fixture providing the in-memory database.
+
+    Returns:
+        AsyncSession: A session connected to the test database.
+    """
     session_factory = async_sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False
     )
@@ -40,6 +63,17 @@ async def db_session(db_engine):
 
 @pytest_asyncio.fixture
 async def client(db_session):
+    """Provide an httpx AsyncClient configured to talk to the FastAPI app.
+
+    The FastAPI dependency for ``get_db`` is overridden so that all requests
+    use the test database session.
+
+    Args:
+        db_session: The async session fixture.
+
+    Returns:
+        AsyncClient: An HTTP client pointed at the test application.
+    """
     async def override_get_db():
         yield db_session
 

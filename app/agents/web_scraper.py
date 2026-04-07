@@ -110,6 +110,15 @@ _INVALID_PHRASES: dict[str, list[str]] = {
 
 
 def extract_http_body_and_status(text: str) -> tuple[int, str]:
+    """Parse an HTTP response string into its status code and body content.
+
+    Args:
+        text: Raw HTTP response text, optionally prefixed with "HTTP <status>".
+
+    Returns:
+        A tuple of (status_code, body) where status_code is 0 if no HTTP prefix
+        is found.
+    """
     status = 0
     body = text
     if text.startswith("HTTP "):
@@ -140,6 +149,17 @@ class WebScraperAgent(LLMAgent):
         max_steps: int = 5,
         mode_category_budgets: dict[str, dict[str, int]] | None = None,
     ):
+        """Initialize the WebScraperAgent with tools and budget configuration.
+
+        Args:
+            llm: The ChatOpenAI (or compatible) LLM instance for generating queries.
+            prompt_loader: Loader for system prompt templates.
+            search_tool: LangChain tool for performing web searches.
+            fetch_tool: Tool for fetching and reading URL content.
+            max_steps: Maximum number of tool-calling loop iterations.
+            mode_category_budgets: Per-mode, per-category budget overrides keyed
+                as "mode:category" (e.g. "daily:job").
+        """
         super().__init__(llm=llm, prompt_loader=prompt_loader)
         self._search_tool = search_tool
         self._fetch_tool = fetch_tool

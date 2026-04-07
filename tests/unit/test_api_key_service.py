@@ -16,6 +16,8 @@ def _make_user(role="user", encrypted_api_key=None, free_runs_used=0):
 
 
 class TestResolveApiKey:
+    """Tests for the resolve_api_key function which determines which API key to use for a user."""
+
     def test_admin_always_gets_global_key(self):
         user = _make_user(role="admin", free_runs_used=100)
         with patch("app.services.api_key_service.settings") as mock_settings:

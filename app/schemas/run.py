@@ -1,3 +1,5 @@
+"""Schemas for pipeline run lifecycle operations and API responses."""
+
 from datetime import datetime
 from typing import Literal
 

@@ -16,16 +16,31 @@ def _job(title: str, url: str = "") -> dict:
 
 @pytest.fixture()
 def node():
+    """Create a job expiry validator node with no audit writer.
+
+    Returns:
+        Callable: An async node function that validates job freshness.
+    """
     return make_job_expiry_validator_node("daily")
 
 
 @pytest.fixture()
 def node_with_audit(test_session_factory):
+    """Create a job expiry validator node backed by an AuditWriter.
+
+    Args:
+        test_session_factory: Session factory fixture providing the test DB.
+
+    Returns:
+        tuple: A (node, writer) pair for testing audit event output.
+    """
     writer = AuditWriter()
     return make_job_expiry_validator_node("daily", audit_writer=writer), writer
 
 
 class TestJobExpiryValidator:
+    """Tests for the job expiry re-validation node that filters expired postings."""
+
     @pytest.mark.asyncio
     async def test_valid_job_passes_through(self, node):
         with patch(

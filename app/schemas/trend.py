@@ -1,3 +1,5 @@
+"""Schema for industry trend API responses."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict

@@ -1,3 +1,5 @@
+"""FastAPI application entry point, CORS setup, router registration, and SPA serving."""
+
 import logging
 import os
 import uvicorn
@@ -117,7 +119,7 @@ app.include_router(user_settings.router, prefix="/api")
 @app.get("/{full_path:path}")
 async def spa_catch_all(full_path: str):
     """Serve SPA static files or fall back to index.html for client-side routing."""
-    # Serve static files (e.g. favicon.svg) directly if present
+    # Serve static files (e.g., favicon.svg) directly if present
     if full_path:
         static_file = spa_dir / full_path
         if static_file.is_file() and spa_dir in static_file.resolve().parents:

@@ -31,6 +31,13 @@ async def _create_complete_profile(client, db_session, headers, name="TestProfil
 
 @pytest.mark.asyncio
 async def test_create_run(client, db_session, admin_headers):
+    """Verify that creating a daily run returns status 201 with a pending run record.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile_id = await _create_complete_profile(client, db_session, admin_headers)
 
     resp = await client.post(
@@ -70,6 +77,12 @@ async def test_create_run_incomplete_profile(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_create_run_profile_not_found(client, admin_headers):
+    """Verify that starting a run on a nonexistent profile returns 404.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post(
         "/api/profiles/nonexistent/runs",
         json={"mode": "daily"},
@@ -80,6 +93,12 @@ async def test_create_run_profile_not_found(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_create_run_invalid_mode(client, admin_headers):
+    """Verify that an invalid run mode returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     profile_resp = await client.post("/api/profiles", json={"name": "TestProfile", "preferred_titles": ["Dev"]}, headers=admin_headers)
     profile_id = profile_resp.json()["id"]
 
@@ -93,6 +112,13 @@ async def test_create_run_invalid_mode(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_runs(client, db_session, admin_headers):
+    """Verify listing runs for a profile returns all created runs.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile_id = await _create_complete_profile(client, db_session, admin_headers)
 
     await client.post(f"/api/profiles/{profile_id}/runs", json={"mode": "daily"}, headers=admin_headers)
@@ -108,6 +134,13 @@ async def test_list_runs(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_get_run(client, db_session, admin_headers):
+    """Verify fetching a single run by ID returns the correct record.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile_id = await _create_complete_profile(client, db_session, admin_headers)
 
     run_resp = await client.post(
@@ -124,6 +157,12 @@ async def test_get_run(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_get_run_not_found(client, admin_headers):
+    """Verify that fetching a nonexistent run returns 404.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     profile_resp = await client.post("/api/profiles", json={"name": "TestProfile", "preferred_titles": ["Dev"]}, headers=admin_headers)
     profile_id = profile_resp.json()["id"]
 
@@ -133,6 +172,13 @@ async def test_get_run_not_found(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_get_run_wrong_profile(client, db_session, admin_headers):
+    """Verify that accessing a run via a different profile returns 404.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     p1_id = await _create_complete_profile(client, db_session, admin_headers, "Profile1")
     p2 = await client.post("/api/profiles", json={"name": "Profile2", "preferred_titles": ["Dev"]}, headers=admin_headers)
     p2_id = p2.json()["id"]

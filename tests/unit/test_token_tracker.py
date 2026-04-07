@@ -9,10 +9,17 @@ from app.engine.token_tracker import AgentTokenUsage, RunTokenTracker
 
 @pytest.fixture()
 def tracker() -> RunTokenTracker:
+    """Create a RunTokenTracker for a test run.
+
+    Returns:
+        RunTokenTracker: A fresh tracker with no recorded usage.
+    """
     return RunTokenTracker(run_id="test-run-001")
 
 
 class TestAgentTokenUsage:
+    """Tests for AgentTokenUsage dataclass serialization."""
+
     def test_to_dict(self) -> None:
         usage = AgentTokenUsage(
             agent_name="ceo", model="gpt-5.4-mini",
@@ -28,6 +35,8 @@ class TestAgentTokenUsage:
 
 
 class TestRunTokenTracker:
+    """Tests for recording and querying token usage across agents in a run."""
+
     @pytest.mark.asyncio
     async def test_record_single_agent(self, tracker: RunTokenTracker) -> None:
         await tracker.record("goal_extractor", "gpt-5.4", 200, 100)

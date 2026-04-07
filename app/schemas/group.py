@@ -1,3 +1,5 @@
+"""Schema for professional group API responses."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict

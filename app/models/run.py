@@ -1,3 +1,5 @@
+"""SQLAlchemy model for immutable pipeline execution records."""
+
 import uuid
 from datetime import datetime, timezone
 

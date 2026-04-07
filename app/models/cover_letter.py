@@ -1,3 +1,5 @@
+"""SQLAlchemy model for generated cover letters."""
+
 import uuid
 from datetime import datetime, timezone
 

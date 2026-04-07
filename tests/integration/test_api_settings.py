@@ -8,6 +8,12 @@ from app.models.user import User
 
 @pytest.mark.asyncio
 async def test_get_api_key_status_no_key(client, admin_headers):
+    """Verify that the API key status endpoint reports no key when none is stored.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.get("/api/settings/api-key-status", headers=admin_headers)
     assert resp.status_code == 200
     data = resp.json()
@@ -19,6 +25,13 @@ async def test_get_api_key_status_no_key(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_save_api_key(client, admin_headers, db_session):
+    """Verify saving a valid API key stores it and reports the last four digits.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+        db_session: The test database session.
+    """
     with patch(
         "app.services.api_key_service.validate_openai_key",
         new_callable=AsyncMock,
@@ -38,6 +51,12 @@ async def test_save_api_key(client, admin_headers, db_session):
 
 @pytest.mark.asyncio
 async def test_save_invalid_key_returns_422(client, admin_headers):
+    """Verify that saving an invalid API key returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     with patch(
         "app.services.api_key_service.validate_openai_key",
         new_callable=AsyncMock,
@@ -53,6 +72,13 @@ async def test_save_invalid_key_returns_422(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_delete_api_key(client, admin_headers, db_session):
+    """Verify deleting a stored API key removes it and reports has_api_key=False.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+        db_session: The test database session.
+    """
     # Save a key first
     with patch(
         "app.services.api_key_service.validate_openai_key",
@@ -77,6 +103,12 @@ async def test_delete_api_key(client, admin_headers, db_session):
 
 @pytest.mark.asyncio
 async def test_key_too_short_returns_422(client, admin_headers):
+    """Verify that a key shorter than the minimum length returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.put(
         "/api/settings/api-key",
         json={"api_key": "short"},

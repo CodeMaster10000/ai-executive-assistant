@@ -1,3 +1,5 @@
+"""Google OAuth2 integration for third-party sign-in."""
+
 import logging
 from urllib.parse import urlencode
 
@@ -13,6 +15,14 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
 def get_google_auth_url(redirect_uri: str) -> str:
+    """Build the Google OAuth2 authorization URL for user sign-in.
+
+    Args:
+        redirect_uri: The callback URL Google should redirect to after authorization.
+
+    Returns:
+        A fully-formed authorization URL string.
+    """
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": redirect_uri,

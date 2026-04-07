@@ -67,6 +67,11 @@ class VerificationError(Exception):
     """Raised when a hard-fail verification prevents pipeline continuation."""
 
     def __init__(self, verification: AgentVerification) -> None:
+        """Initialize with the failed agent verification result.
+
+        Args:
+            verification: The AgentVerification that triggered the hard failure.
+        """
         self.verification = verification
         super().__init__(
             f"Verification failed for {verification.agent_name}: "
@@ -104,6 +109,11 @@ class Verifier:
     """Deterministic output validator dispatching per-agent checks."""
 
     def __init__(self, policy_engine: PolicyEngine | None = None) -> None:
+        """Initialize the verifier with an optional policy engine for boundary and budget checks.
+
+        Args:
+            policy_engine: Policy engine used to read boundary rules and output limits. If None, defaults are used.
+        """
         self._policy_engine = policy_engine
         global_cfg = policy_engine.get_global_config() if policy_engine else {}
         self._max_output_items: int = global_cfg.get("max_output_items", 50)

@@ -1,3 +1,5 @@
+"""Schema for course opportunity API responses."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict

@@ -1,3 +1,5 @@
+"""Email delivery for account verification and password reset flows."""
+
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -35,6 +37,12 @@ def _send(to: str, subject: str, html_body: str) -> None:
 
 
 def send_verification_email(email: str, token: str) -> None:
+    """Send an account verification email containing a tokenized link.
+
+    Args:
+        email: Recipient email address.
+        token: JWT verification token to embed in the link.
+    """
     link = f"{settings.app_base_url}/verify-email?token={token}"
     html = (
         "<h2>Verify your email</h2>"
@@ -45,6 +53,12 @@ def send_verification_email(email: str, token: str) -> None:
 
 
 def send_password_reset_email(email: str, token: str) -> None:
+    """Send a password reset email containing a tokenized link.
+
+    Args:
+        email: Recipient email address.
+        token: JWT password-reset token to embed in the link.
+    """
     link = f"{settings.app_base_url}/reset-password?token={token}"
     html = (
         "<h2>Reset your password</h2>"

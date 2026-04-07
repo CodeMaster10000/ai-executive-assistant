@@ -37,6 +37,13 @@ async def _create_profile_and_run(db_session):
 
 @pytest.mark.asyncio
 async def test_list_jobs(client, db_session, admin_headers):
+    """Verify listing job opportunities returns all jobs for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(JobOpportunity(
         profile_id=profile.id, run_id=run.id,
@@ -55,6 +62,13 @@ async def test_list_jobs(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_certifications(client, db_session, admin_headers):
+    """Verify listing certifications returns all certifications for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(Certification(
         profile_id=profile.id, run_id=run.id,
@@ -71,6 +85,13 @@ async def test_list_certifications(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_courses(client, db_session, admin_headers):
+    """Verify listing courses returns all courses for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(Course(
         profile_id=profile.id, run_id=run.id,
@@ -87,6 +108,13 @@ async def test_list_courses(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_events(client, db_session, admin_headers):
+    """Verify listing events returns all events for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(Event(
         profile_id=profile.id, run_id=run.id,
@@ -103,6 +131,13 @@ async def test_list_events(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_groups(client, db_session, admin_headers):
+    """Verify listing groups returns all groups for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(Group(
         profile_id=profile.id, run_id=run.id,
@@ -120,6 +155,13 @@ async def test_list_groups(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_trends(client, db_session, admin_headers):
+    """Verify listing trends returns all trends for the profile.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run = await _create_profile_and_run(db_session)
     db_session.add(Trend(
         profile_id=profile.id, run_id=run.id,
@@ -140,6 +182,13 @@ async def test_list_trends(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_jobs_filtered_by_run_id(client, db_session, admin_headers):
+    """Verify that the run_id query parameter correctly filters job results.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, run1 = await _create_profile_and_run(db_session)
     run2 = Run(profile_id=profile.id, mode="daily", status="completed")
     db_session.add(run2)
@@ -178,6 +227,13 @@ async def test_list_jobs_filtered_by_run_id(client, db_session, admin_headers):
 
 @pytest.mark.asyncio
 async def test_list_jobs_empty(client, db_session, admin_headers):
+    """Verify that listing jobs for a profile with no jobs returns an empty list.
+
+    Args:
+        client: The httpx test client.
+        db_session: The test database session.
+        admin_headers: Auth headers for the admin user.
+    """
     profile, _ = await _create_profile_and_run(db_session)
     resp = await client.get(f"/api/profiles/{profile.id}/results/jobs", headers=admin_headers)
     assert resp.status_code == 200

@@ -19,6 +19,11 @@ class AgentTokenUsage:
     call_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the agent token usage to a dictionary.
+
+        Returns:
+            Dictionary containing agent name, model, token counts, and call count.
+        """
         return {
             "agent_name": self.agent_name,
             "model": self.model,
@@ -37,6 +42,11 @@ class RunTokenTracker:
     """
 
     def __init__(self, run_id: str) -> None:
+        """Initialize a token tracker for the given pipeline run.
+
+        Args:
+            run_id: Unique identifier of the run to track token usage for.
+        """
         self.run_id = run_id
         self._usage: dict[str, AgentTokenUsage] = {}
         self._lock = asyncio.Lock()

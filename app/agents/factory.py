@@ -41,6 +41,16 @@ class AgentFactory:
         policy_engine: Any | None = None,
         agent_models: AgentModelConfig | None = None,
     ):
+        """Initialize the AgentFactory with shared dependencies for agent creation.
+
+        Args:
+            llm: The default ChatOpenAI (or compatible) LLM instance shared across agents.
+            prompt_loader: Optional loader for system prompt templates.
+            search_tool: Optional LangChain tool for web searching, used by WebScraperAgent.
+            policy_engine: Optional policy engine for resolving per-agent budgets and limits.
+            agent_models: Optional per-agent model overrides; agents not overridden use
+                the default llm.
+        """
         self._llm = llm
         self._prompt_loader = prompt_loader
         self._search_tool = search_tool

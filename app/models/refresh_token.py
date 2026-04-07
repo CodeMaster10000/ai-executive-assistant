@@ -1,3 +1,5 @@
+"""SQLAlchemy model for hashed refresh tokens used in JWT rotation."""
+
 import uuid
 from datetime import datetime, timezone
 

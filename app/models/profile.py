@@ -1,3 +1,5 @@
+"""SQLAlchemy model for user profiles (independent workspaces)."""
+
 import uuid
 from datetime import datetime, timezone
 

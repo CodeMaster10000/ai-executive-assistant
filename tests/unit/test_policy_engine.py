@@ -82,6 +82,14 @@ def policy_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def engine(policy_dir: Path) -> PolicyEngine:
+    """Create a PolicyEngine instance from the test policy directory.
+
+    Args:
+        policy_dir: Path to the temporary policy YAML files.
+
+    Returns:
+        PolicyEngine: An engine loaded with the test policies.
+    """
     return PolicyEngine(policy_dir)
 
 
@@ -91,6 +99,8 @@ def engine(policy_dir: Path) -> PolicyEngine:
 
 
 class TestLoading:
+    """Tests for policy file loading and introspection."""
+
     def test_list_policies(self, engine: PolicyEngine) -> None:
         names = engine.list_policies()
         assert set(names) == {"tools", "budgets", "boundaries", "redaction"}
@@ -133,6 +143,8 @@ class TestLoading:
 
 
 class TestToolAllowlist:
+    """Tests for tool allowlist and denylist enforcement per agent."""
+
     def test_allowed_tool_returns_true(self, engine: PolicyEngine) -> None:
         assert engine.is_tool_allowed("web_scraper", "web_search") is True
 
@@ -159,6 +171,8 @@ class TestToolAllowlist:
 
 
 class TestBudgets:
+    """Tests for per-agent budget queries (step limits, token limits)."""
+
     def test_get_budget_known_agent(self, engine: PolicyEngine) -> None:
         budget = engine.get_budget("goal_extractor")
         assert isinstance(budget, Budget)
@@ -192,6 +206,8 @@ class TestBudgets:
 
 
 class TestBoundaries:
+    """Tests for data boundary queries that define agent input/output fields."""
+
     def test_get_boundaries_known_agent(self, engine: PolicyEngine) -> None:
         b = engine.get_boundaries("goal_extractor")
         assert b["inputs"] == ["profile_targets"]
@@ -213,6 +229,8 @@ class TestBoundaries:
 
 
 class TestRedaction:
+    """Tests for PII redaction rule application."""
+
     def test_get_redaction_rules_returns_list(self, engine: PolicyEngine) -> None:
         rules = engine.get_redaction_rules()
         assert isinstance(rules, list)
@@ -252,6 +270,8 @@ class TestRedaction:
 
 
 class TestGlobalConfig:
+    """Tests for global configuration values from the policy engine."""
+
     def test_get_global_config(self, engine: PolicyEngine) -> None:
         cfg = engine.get_global_config()
         assert cfg["max_output_items"] == 50

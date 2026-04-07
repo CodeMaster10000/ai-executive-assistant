@@ -1,3 +1,5 @@
+"""SQLAlchemy model for industry events and conferences."""
+
 import uuid
 from datetime import datetime, timezone
 

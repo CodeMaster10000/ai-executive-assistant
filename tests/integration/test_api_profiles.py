@@ -1,8 +1,16 @@
+"""Integration tests for the profile CRUD API endpoints."""
+
 import pytest
 
 
 @pytest.mark.asyncio
 async def test_create_profile(client, admin_headers):
+    """Verify creating a profile with all fields returns the correct data.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post(
         "/api/profiles",
         json={"name": "Architect", "targets": ["cloud", "infra"], "skills": ["aws"], "preferred_titles": ["Cloud Architect"]},
@@ -21,6 +29,12 @@ async def test_create_profile(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_create_profile_minimal(client, admin_headers):
+    """Verify creating a profile with only the required name field.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post("/api/profiles", json={"name": "Developer", "preferred_titles": ["Developer"]}, headers=admin_headers)
     assert resp.status_code == 201
     data = resp.json()
@@ -30,24 +44,48 @@ async def test_create_profile_minimal(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_create_profile_missing_name(client, admin_headers):
+    """Verify that omitting the name field returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post("/api/profiles", json={"preferred_titles": ["Dev"]}, headers=admin_headers)
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_create_profile_empty_name(client, admin_headers):
+    """Verify that an empty-string name returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post("/api/profiles", json={"name": "", "preferred_titles": ["Dev"]}, headers=admin_headers)
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_create_profile_name_too_long(client, admin_headers):
+    """Verify that a name exceeding 200 characters returns 422.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.post("/api/profiles", json={"name": "x" * 201, "preferred_titles": ["Dev"]}, headers=admin_headers)
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_list_profiles(client, admin_headers):
+    """Verify listing profiles returns all profiles in alphabetical order.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     await client.post("/api/profiles", json={"name": "Alpha", "preferred_titles": ["Dev"]}, headers=admin_headers)
     await client.post("/api/profiles", json={"name": "Beta", "preferred_titles": ["Dev"]}, headers=admin_headers)
     resp = await client.get("/api/profiles", headers=admin_headers)
@@ -60,6 +98,12 @@ async def test_list_profiles(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_get_profile(client, admin_headers):
+    """Verify fetching a single profile by ID returns the correct data.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     create_resp = await client.post(
         "/api/profiles", json={"name": "Architect", "skills": ["python"], "preferred_titles": ["Architect"]}, headers=admin_headers
     )
@@ -72,12 +116,24 @@ async def test_get_profile(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_get_profile_not_found(client, admin_headers):
+    """Verify that fetching a nonexistent profile returns 404.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.get("/api/profiles/nonexistent-id", headers=admin_headers)
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_update_profile(client, admin_headers):
+    """Verify updating a profile changes the specified fields while preserving others.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     create_resp = await client.post(
         "/api/profiles", json={"name": "Old Name", "targets": ["a"], "preferred_titles": ["Dev"]}, headers=admin_headers
     )
@@ -98,6 +154,12 @@ async def test_update_profile(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_update_profile_not_found(client, admin_headers):
+    """Verify that updating a nonexistent profile returns 404.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.put(
         "/api/profiles/nonexistent-id", json={"name": "Whatever"}, headers=admin_headers
     )
@@ -106,6 +168,12 @@ async def test_update_profile_not_found(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_delete_profile(client, admin_headers):
+    """Verify deleting a profile returns 204 and makes it inaccessible.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     create_resp = await client.post("/api/profiles", json={"name": "ToDelete", "preferred_titles": ["Dev"]}, headers=admin_headers)
     profile_id = create_resp.json()["id"]
 
@@ -118,6 +186,12 @@ async def test_delete_profile(client, admin_headers):
 
 @pytest.mark.asyncio
 async def test_delete_profile_not_found(client, admin_headers):
+    """Verify that deleting a nonexistent profile returns 404.
+
+    Args:
+        client: The httpx test client.
+        admin_headers: Auth headers for the admin user.
+    """
     resp = await client.delete("/api/profiles/nonexistent-id", headers=admin_headers)
     assert resp.status_code == 404
 

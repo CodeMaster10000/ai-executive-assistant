@@ -13,11 +13,24 @@ from app.engine.verifier import (
 
 @pytest.fixture()
 def verifier():
+    """Create a Verifier instance with no policy engine.
+
+    Returns:
+        Verifier: A verifier using default validation rules.
+    """
     return Verifier()
 
 
 @pytest.fixture()
 def verifier_with_policy(tmp_path):
+    """Create a Verifier backed by a PolicyEngine with output limits and boundary rules.
+
+    Args:
+        tmp_path: Pytest built-in temporary path fixture.
+
+    Returns:
+        Verifier: A verifier with policy-based validation.
+    """
     policy_dir = tmp_path / "policy"
     policy_dir.mkdir()
     (policy_dir / "budgets.yaml").write_text("global:\n  max_output_items: 10\n")
@@ -36,6 +49,8 @@ def verifier_with_policy(tmp_path):
 
 
 class TestGoalExtractorVerification:
+    """Tests for verifier checks on goal_extractor agent output."""
+
     def test_valid_output(self, verifier):
         output = {
             "search_prompts": {
@@ -109,6 +124,8 @@ class TestGoalExtractorVerification:
 
 
 class TestWebScrapersVerification:
+    """Tests for verifier checks on web_scrapers agent output."""
+
     def test_valid_output(self, verifier):
         output = {
             "raw_job_results": [
@@ -165,6 +182,8 @@ class TestWebScrapersVerification:
 
 
 class TestDataFormatterVerification:
+    """Tests for verifier checks on data_formatter agent output."""
+
     def test_valid_output(self, verifier):
         output = {
             "formatted_jobs": [{"title": "Job A"}],
@@ -210,6 +229,8 @@ class TestDataFormatterVerification:
 
 
 class TestCEOVerification:
+    """Tests for verifier checks on CEO agent output."""
+
     def test_valid_output(self, verifier):
         output = {
             "strategic_recommendations": [
@@ -258,6 +279,8 @@ class TestCEOVerification:
 
 
 class TestCFOVerification:
+    """Tests for verifier checks on CFO agent output."""
+
     def test_valid_output(self, verifier):
         output = {
             "risk_assessments": [
@@ -293,6 +316,8 @@ class TestCFOVerification:
 
 
 class TestCoverLetterVerification:
+    """Tests for verifier checks on cover_letter_agent output."""
+
     def test_valid_output(self, verifier):
         output = {"cover_letter_content": "A" * 200}
         result = verifier.verify("cover_letter_agent", output)
@@ -325,6 +350,8 @@ class TestCoverLetterVerification:
 
 
 class TestJobFreshnessVerification:
+    """Tests for the job freshness check that flags expired postings."""
+
     def test_clean_results_pass(self, verifier):
         output = {
             "raw_job_results": [
@@ -376,6 +403,8 @@ class TestJobFreshnessVerification:
 
 
 class TestUnknownAgent:
+    """Tests verifier behavior when given an unknown agent name."""
+
     def test_unknown_agent_passes(self, verifier):
         result = verifier.verify("unknown_agent", {"any": "data"})
         assert result.status == VerificationStatus.PASS
@@ -387,6 +416,8 @@ class TestUnknownAgent:
 
 
 class TestBuildReport:
+    """Tests for building an overall verification report from multiple agent results."""
+
     def test_all_pass(self, verifier):
         v1 = AgentVerification(
             agent_name="a", status=VerificationStatus.PASS,
@@ -444,6 +475,8 @@ class TestBuildReport:
 
 
 class TestVerificationError:
+    """Tests for the VerificationError exception and its message formatting."""
+
     def test_error_message(self):
         v = AgentVerification(
             agent_name="test", status=VerificationStatus.FAIL,

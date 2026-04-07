@@ -1,3 +1,5 @@
+"""Schema for read-only policy file API responses."""
+
 from pydantic import BaseModel
 
 

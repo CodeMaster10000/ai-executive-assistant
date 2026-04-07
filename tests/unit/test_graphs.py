@@ -109,11 +109,13 @@ class TestCallAgent:
     """Tests for call_agent which dispatches sync/async agents."""
 
     async def test_async_agent(self):
+        """Verify call_agent dispatches an async agent directly."""
         agent = _make_async_agent("a", {"k": "v"})
         result = await call_agent(agent, {"run_id": "r1"})
         assert result == {"k": "v"}
 
     async def test_sync_agent_runs_in_thread(self):
+        """Verify call_agent runs a sync agent in a background thread."""
         agent = _make_sync_agent("s", {"k": "sync"})
         result = await call_agent(agent, {"run_id": "r1"})
         assert result == {"k": "sync"}
@@ -136,16 +138,18 @@ class TestCheckTool:
     """Tests for check_tool policy enforcement."""
 
     def test_no_policy_engine_allows_all(self):
-        # Should not raise
+        """Verify check_tool allows all tools when no policy engine is present."""
         check_tool(None, "any_agent", "any_tool")
 
     def test_allowed_tool_passes(self):
+        """Verify check_tool passes when the policy engine allows the tool."""
         pe = MagicMock(spec=PolicyEngine)
         pe.is_tool_allowed.return_value = True
         check_tool(pe, "goal_extractor", "llm_structured_output")
         pe.is_tool_allowed.assert_called_once_with("goal_extractor", "llm_structured_output")
 
     def test_disallowed_tool_raises(self):
+        """Verify check_tool raises PermissionError when the tool is denied."""
         pe = MagicMock(spec=PolicyEngine)
         pe.is_tool_allowed.return_value = False
         with pytest.raises(PermissionError, match="Policy violation"):
@@ -156,12 +160,13 @@ class TestPublishSSE:
     """Tests for _publish_sse helper."""
 
     async def test_publishes_when_manager_present(self):
+        """Verify _publish_sse calls publish on the event manager."""
         mgr = AsyncMock()
         await _publish_sse(mgr, "run1", {"type": "test"})
         mgr.publish.assert_awaited_once_with("run1", {"type": "test"})
 
     async def test_noop_when_manager_is_none(self):
-        # Should not raise
+        """Verify _publish_sse is a no-op when no event manager is provided."""
         await _publish_sse(None, "run1", {"type": "test"})
 
 
@@ -169,11 +174,13 @@ class TestBuildVerificationDict:
     """Tests for _build_verification_dict helper."""
 
     def test_no_verifier_returns_pass(self):
+        """Verify _build_verification_dict returns pass when no verifier is set."""
         vdict, status = _build_verification_dict(None, "agent", {})
         assert vdict == {}
         assert status == "pass"
 
     def test_with_verifier_returns_serialized_result(self):
+        """Verify _build_verification_dict serializes the verifier result."""
         mock_check = CheckResult(
             check_name="schema_check",
             status=VerificationStatus.PASS,
@@ -197,6 +204,7 @@ class TestBuildVerificationDict:
         assert vdict["checks"][0]["check_name"] == "schema_check"
 
     def test_with_verifier_partial_status(self):
+        """Verify _build_verification_dict reports partial status correctly."""
         mock_check = CheckResult(
             check_name="bounds_check",
             status=VerificationStatus.PARTIAL,
@@ -219,12 +227,13 @@ class TestWriteAuditEnd:
     """Tests for _write_audit_end helper."""
 
     async def test_noop_when_no_audit_writer(self):
-        # Should not raise
+        """Verify _write_audit_end is a no-op when audit_writer is None."""
         await _write_audit_end(
             None, "r1", lambda: "ts", "agent_end", "agent", "agent", {}, {},
         )
 
     async def test_writes_agent_end_event(self):
+        """Verify _write_audit_end writes an agent_end audit event."""
         aw = AsyncMock(spec=AuditWriter)
         await _write_audit_end(
             aw, "r1", lambda: "2026-01-01",
@@ -239,6 +248,7 @@ class TestWriteAuditEnd:
         assert event.event_type == "agent_end"
 
     async def test_writes_verifier_result_when_present(self):
+        """Verify _write_audit_end writes both agent_end and verifier_result events."""
         aw = AsyncMock(spec=AuditWriter)
         vdict = {"agent_name": "test", "status": "pass", "checks": []}
         await _write_audit_end(
@@ -255,6 +265,7 @@ class TestAccumulateVerifierResults:
     """Tests for _accumulate_verifier_results helper."""
 
     def test_appends_to_empty_state(self):
+        """Verify verifier result is appended when state has no prior results."""
         state: dict[str, Any] = {}
         result: dict[str, Any] = {}
         vdict = {"agent_name": "a", "status": "pass"}
@@ -262,6 +273,7 @@ class TestAccumulateVerifierResults:
         assert result["verifier_results"] == [vdict]
 
     def test_appends_to_existing(self):
+        """Verify verifier result is appended to existing results list."""
         existing = [{"agent_name": "prev"}]
         state: dict[str, Any] = {"verifier_results": existing}
         result: dict[str, Any] = {}

@@ -16,6 +16,11 @@ class DiffEngine:
     """Compare two runs and produce a structured diff report."""
 
     def __init__(self, audit_writer: AuditWriter) -> None:
+        """Initialize the diff engine with an audit writer for loading run bundles.
+
+        Args:
+            audit_writer: Audit writer instance used to read stored run bundles.
+        """
         self._audit_writer = audit_writer
 
     @staticmethod

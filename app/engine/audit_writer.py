@@ -36,6 +36,11 @@ class AuditWriter:
         policy_engine: PolicyEngine | None = None,
         **_kwargs: Any,
     ) -> None:
+        """Initialize the audit writer with an optional policy engine for PII redaction.
+
+        Args:
+            policy_engine: Policy engine used to apply redaction rules. If None, no redaction is applied.
+        """
         self._policy_engine = policy_engine
 
     # ------------------------------------------------------------------

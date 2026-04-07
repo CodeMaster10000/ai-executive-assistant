@@ -1,3 +1,5 @@
+"""Schemas for cover letter generation requests and API responses."""
+
 from datetime import datetime
 
 from pydantic import BaseModel

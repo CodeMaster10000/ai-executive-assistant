@@ -43,6 +43,7 @@ class TestEnsureAdmin:
 
     @patch("app.main._settings")
     async def test_no_admin_email_returns_early(self, mock_settings):
+        """Verify _ensure_admin returns immediately when admin_email is empty."""
         from app.main import _ensure_admin
 
         mock_settings.admin_email = ""
@@ -52,6 +53,7 @@ class TestEnsureAdmin:
     @patch("app.main._settings")
     @patch("app.db.async_session_factory", new_callable=MagicMock)
     async def test_promote_existing_user(self, mock_session_factory, mock_settings):
+        """Verify _ensure_admin promotes an existing non-admin user to admin."""
         from app.main import _ensure_admin
 
         mock_settings.admin_email = "admin@test.com"
@@ -81,6 +83,7 @@ class TestEnsureAdmin:
     @patch("app.main._settings")
     @patch("app.db.async_session_factory", new_callable=MagicMock)
     async def test_create_new_admin_user(self, mock_session_factory, mock_settings):
+        """Verify _ensure_admin creates a new admin user when no matching user exists."""
         from app.main import _ensure_admin
 
         mock_settings.admin_email = "newadmin@test.com"
@@ -106,6 +109,7 @@ class TestEnsureAdmin:
     @patch("app.main._settings")
     @patch("app.db.async_session_factory", new_callable=MagicMock)
     async def test_already_admin_no_update(self, mock_session_factory, mock_settings):
+        """Verify _ensure_admin skips update when user already has admin role."""
         from app.main import _ensure_admin
 
         mock_settings.admin_email = "admin@test.com"
@@ -272,6 +276,7 @@ class TestDailyAuditNodeWithVerifierResults:
     """Cover lines 78-95 of daily.py: building verifier report from verifier_results."""
 
     async def test_audit_node_builds_verifier_report(self):
+        """Verify the daily audit node constructs a verifier report from stored results."""
         from app.graphs.daily import _make_audit_node
         from app.engine.verifier import Verifier
 
@@ -328,6 +333,7 @@ class TestWeeklyAuditNodeWithVerifierResults:
     """Cover lines 78-95 of weekly.py: building verifier report from verifier_results."""
 
     async def test_audit_node_builds_verifier_report(self):
+        """Verify the weekly audit node constructs a verifier report from stored results."""
         from app.graphs.weekly import _make_audit_node
         from app.engine.verifier import Verifier
 
@@ -398,6 +404,7 @@ class TestTimedContextManager:
     """Cover lines 33-35: _timed() context manager."""
 
     def test_timed_records_start_and_elapsed(self):
+        """Verify _timed context manager records start time and elapsed duration."""
         from app.graphs.log import _timed
 
         with _timed() as ctx:
@@ -414,6 +421,7 @@ class TestAgentResultLogger:
     """Cover lines 58-59: agent_result() logging."""
 
     def test_agent_result_logs_debug(self):
+        """Verify agent_result logs without raising errors."""
         from app.graphs.log import agent_result
 
         # Should not raise; just exercises the logging path
@@ -424,6 +432,7 @@ class TestFanOutNodeAuditAppend:
     """Cover line 346: audit_writer.append inside make_fan_out_node."""
 
     async def test_fan_out_with_audit_writer(self):
+        """Verify fan-out node writes audit events when audit_writer is provided."""
         from app.graphs.log import make_fan_out_node
 
         mock_scraper = AsyncMock(return_value={
@@ -463,6 +472,7 @@ class TestRegisterRequestPasswordValidation:
     """Cover password_strength validator on RegisterRequest."""
 
     def test_valid_password(self):
+        """Verify a strong password passes RegisterRequest validation."""
         from app.schemas.auth import RegisterRequest
 
         req = RegisterRequest(
@@ -474,6 +484,7 @@ class TestRegisterRequestPasswordValidation:
         assert req.password == "StrongPass1"
 
     def test_missing_uppercase(self):
+        """Verify RegisterRequest rejects a password without an uppercase letter."""
         from app.schemas.auth import RegisterRequest
 
         with pytest.raises(ValidationError, match="uppercase"):
@@ -483,6 +494,7 @@ class TestRegisterRequestPasswordValidation:
             )
 
     def test_missing_lowercase(self):
+        """Verify RegisterRequest rejects a password without a lowercase letter."""
         from app.schemas.auth import RegisterRequest
 
         with pytest.raises(ValidationError, match="lowercase"):
@@ -492,6 +504,7 @@ class TestRegisterRequestPasswordValidation:
             )
 
     def test_missing_digit(self):
+        """Verify RegisterRequest rejects a password without a digit."""
         from app.schemas.auth import RegisterRequest
 
         with pytest.raises(ValidationError, match="digit"):
@@ -505,24 +518,28 @@ class TestResetPasswordRequestValidation:
     """Cover password_strength validator on ResetPasswordRequest."""
 
     def test_valid_password(self):
+        """Verify a strong password passes ResetPasswordRequest validation."""
         from app.schemas.auth import ResetPasswordRequest
 
         req = ResetPasswordRequest(token="tok", password="GoodPass1")
         assert req.password == "GoodPass1"
 
     def test_missing_uppercase(self):
+        """Verify ResetPasswordRequest rejects a password without an uppercase letter."""
         from app.schemas.auth import ResetPasswordRequest
 
         with pytest.raises(ValidationError, match="uppercase"):
             ResetPasswordRequest(token="tok", password="nouppercase1")
 
     def test_missing_lowercase(self):
+        """Verify ResetPasswordRequest rejects a password without a lowercase letter."""
         from app.schemas.auth import ResetPasswordRequest
 
         with pytest.raises(ValidationError, match="lowercase"):
             ResetPasswordRequest(token="tok", password="NOLOWERCASE1")
 
     def test_missing_digit(self):
+        """Verify ResetPasswordRequest rejects a password without a digit."""
         from app.schemas.auth import ResetPasswordRequest
 
         with pytest.raises(ValidationError, match="digit"):
@@ -538,18 +555,21 @@ class TestProfileUpdatePreferredTitlesValidator:
     """Cover the preferred_titles_not_empty validator."""
 
     def test_empty_list_raises(self):
+        """Verify ProfileUpdate rejects an empty preferred_titles list."""
         from app.schemas.profile import ProfileUpdate
 
         with pytest.raises(ValidationError, match="preferred_titles cannot be empty"):
             ProfileUpdate(preferred_titles=[])
 
     def test_none_is_allowed(self):
+        """Verify ProfileUpdate allows None for preferred_titles (no update)."""
         from app.schemas.profile import ProfileUpdate
 
         p = ProfileUpdate(preferred_titles=None)
         assert p.preferred_titles is None
 
     def test_non_empty_list_is_allowed(self):
+        """Verify ProfileUpdate accepts a non-empty preferred_titles list."""
         from app.schemas.profile import ProfileUpdate
 
         p = ProfileUpdate(preferred_titles=["Engineer"])
@@ -565,6 +585,7 @@ class TestGetUserApiKey:
     """Cover get_user_api_key function."""
 
     def test_no_encrypted_key_returns_none(self):
+        """Verify get_user_api_key returns None when no encrypted key is stored."""
         from app.services.api_key_service import get_user_api_key
 
         user = MagicMock()
@@ -572,6 +593,7 @@ class TestGetUserApiKey:
         assert get_user_api_key(user) is None
 
     def test_returns_decrypted_key(self):
+        """Verify get_user_api_key decrypts and returns the stored API key."""
         from app.services.api_key_service import get_user_api_key
         from app.auth.encryption import encrypt_api_key
 
@@ -581,6 +603,7 @@ class TestGetUserApiKey:
         assert result == "sk-test-key-12345"
 
     def test_empty_string_key_returns_none(self):
+        """Verify get_user_api_key returns None for an empty string key."""
         from app.services.api_key_service import get_user_api_key
 
         user = MagicMock()
@@ -597,6 +620,7 @@ class TestDecodeToken:
     """Cover decode_token for various token types."""
 
     def test_decode_valid_access_token(self):
+        """Verify decode_token correctly decodes a valid access token."""
         from app.auth.jwt import create_access_token, decode_token
 
         token = create_access_token("user-1", "test@test.com", "user")
@@ -606,6 +630,7 @@ class TestDecodeToken:
         assert payload["email"] == "test@test.com"
 
     def test_decode_valid_refresh_token(self):
+        """Verify decode_token correctly decodes a valid refresh token."""
         from app.auth.jwt import create_refresh_token, decode_token
 
         token = create_refresh_token("user-2")
@@ -614,6 +639,7 @@ class TestDecodeToken:
         assert payload["type"] == "refresh"
 
     def test_decode_password_reset_token(self):
+        """Verify decode_token correctly decodes a password reset token."""
         from app.auth.jwt import create_password_reset_token, decode_token
 
         token = create_password_reset_token("user-3")
@@ -622,6 +648,7 @@ class TestDecodeToken:
         assert payload["type"] == "password_reset"
 
     def test_decode_email_verify_token(self):
+        """Verify decode_token correctly decodes an email verification token."""
         from app.auth.jwt import create_email_verify_token, decode_token
 
         token = create_email_verify_token("user-4")
@@ -630,6 +657,7 @@ class TestDecodeToken:
         assert payload["type"] == "email_verify"
 
     def test_decode_invalid_token_raises(self):
+        """Verify decode_token raises JWTError for an invalid token string."""
         from jose import JWTError
         from app.auth.jwt import decode_token
 
@@ -671,6 +699,7 @@ class TestConfigDatabaseUrlSync:
     """Cover the database_url_sync property."""
 
     def test_database_url_sync_format(self):
+        """Verify database_url_sync returns a postgresql:// URL without +asyncpg."""
         from app.config import settings
 
         url = settings.database_url_sync
@@ -690,6 +719,7 @@ class TestExtractNameFromCvBlankLines:
     """Cover line 48: blank lines before the name should be skipped."""
 
     def test_blank_lines_before_name(self):
+        """Verify _extract_name_from_cv skips leading blank lines to find the name."""
         from app.agents.cover_letter_agent import _extract_name_from_cv
 
         # Leading blank lines should be skipped, name found on later line
@@ -697,11 +727,13 @@ class TestExtractNameFromCvBlankLines:
         assert _extract_name_from_cv(cv_text) == "John Doe"
 
     def test_all_blank_lines(self):
+        """Verify _extract_name_from_cv returns None when CV is all blank lines."""
         from app.agents.cover_letter_agent import _extract_name_from_cv
 
         assert _extract_name_from_cv("\n\n\n") is None
 
     def test_markdown_blank_then_name(self):
+        """Verify _extract_name_from_cv finds the name after markdown headers and blanks."""
         from app.agents.cover_letter_agent import _extract_name_from_cv
 
         cv_text = "\n### \n\nJane Smith\nSkills"

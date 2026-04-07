@@ -162,15 +162,9 @@ export default function ProfilePage() {
   // Save draft on unmount so fast navigation doesn't lose changes
   useEffect(() => {
     return () => {
-      const p = profileRef.current
-      if (!draftKey || !p) return
-      const draft = formRef.current
-      const saved = buildSaved(p)
-      const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
-      if (dirty) {
-        localStorage.setItem(draftKey, JSON.stringify(draft))
-        toast.warning("You have unsaved profile changes. Your draft has been saved.")
-      }
+      if (!draftKey || !dirtyRef.current) return
+      localStorage.setItem(draftKey, JSON.stringify(formRef.current))
+      toast.warning("You have unsaved profile changes. Your draft has been saved.")
     }
   }, [draftKey])
 
@@ -198,6 +192,7 @@ export default function ProfilePage() {
     }
     const updated = await updateProfile(profileId, data)
     setProfile(updated)
+    applyFormState(buildSaved(updated))
     if (draftKey) localStorage.removeItem(draftKey)
     await refreshProfiles()
     toast.success("Profile saved")

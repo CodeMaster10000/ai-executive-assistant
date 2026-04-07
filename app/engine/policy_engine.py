@@ -39,6 +39,11 @@ class PolicyEngine:
     """
 
     def __init__(self, policy_dir: Path | str = "policy") -> None:
+        """Initialize the policy engine and load all YAML policy files from disk.
+
+        Args:
+            policy_dir: Directory containing YAML policy files. Defaults to "policy".
+        """
         self._policy_dir = Path(policy_dir)
         self._policies: dict[str, Any] = {}
         self._version_hash: str = ""

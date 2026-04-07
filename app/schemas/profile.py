@@ -1,3 +1,5 @@
+"""Schemas for user profile workspace creation, updates, reads, and export."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
@@ -45,6 +47,14 @@ class ProfileUpdate(BaseModel):
     @field_validator("preferred_titles")
     @classmethod
     def preferred_titles_not_empty(cls, v: list[str] | None) -> list[str] | None:
+        """Validate that preferred_titles is not set to an empty list.
+
+        Args:
+            v: The list of preferred job titles, or None if not provided.
+
+        Returns:
+            The validated list, unchanged, or None.
+        """
         if v is not None and len(v) == 0:
             raise ValueError("preferred_titles cannot be empty")
         return v

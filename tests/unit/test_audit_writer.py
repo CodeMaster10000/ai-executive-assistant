@@ -18,11 +18,27 @@ from app.engine.policy_engine import PolicyEngine
 
 @pytest.fixture()
 def writer(test_session_factory) -> AuditWriter:
+    """Create an AuditWriter instance backed by the test database.
+
+    Args:
+        test_session_factory: Session factory fixture providing the test DB.
+
+    Returns:
+        AuditWriter: A writer ready for testing.
+    """
     return AuditWriter()
 
 
 @pytest.fixture()
 def policy_dir(tmp_path):
+    """Create a temporary policy directory with a redaction.yaml file.
+
+    Args:
+        tmp_path: Pytest built-in temporary path fixture.
+
+    Returns:
+        Path: The path to the policy directory.
+    """
     pd = tmp_path / "policy"
     pd.mkdir()
     redaction = {
@@ -45,6 +61,15 @@ def policy_dir(tmp_path):
 
 @pytest.fixture()
 def writer_with_redaction(test_session_factory, policy_dir) -> AuditWriter:
+    """Create an AuditWriter with PII redaction rules loaded from the policy engine.
+
+    Args:
+        test_session_factory: Session factory fixture providing the test DB.
+        policy_dir: Path to the temporary policy directory.
+
+    Returns:
+        AuditWriter: A writer with redaction enabled.
+    """
     pe = PolicyEngine(policy_dir)
     return AuditWriter(policy_engine=pe)
 
@@ -55,6 +80,8 @@ def writer_with_redaction(test_session_factory, policy_dir) -> AuditWriter:
 
 
 class TestAuditEvent:
+    """Tests for AuditEvent serialization via to_dict."""
+
     def test_to_dict_excludes_none(self) -> None:
         event = AuditEvent(timestamp="2025-01-01T00:00:00Z", event_type="agent_start")
         d = event.to_dict()
@@ -81,6 +108,8 @@ class TestAuditEvent:
 
 
 class TestAppendAndRead:
+    """Tests for appending and reading audit events from the database."""
+
     @pytest.mark.asyncio
     async def test_append_and_read_single_event(self, writer: AuditWriter) -> None:
         event = AuditEvent(timestamp="t1", event_type="agent_start", agent="scout")
@@ -128,6 +157,8 @@ class TestAppendAndRead:
 
 
 class TestBundle:
+    """Tests for creating and reading run bundles in the database."""
+
     @pytest.mark.asyncio
     async def test_create_bundle_stores_in_db(self, writer: AuditWriter) -> None:
         await writer.create_run_bundle(
@@ -185,6 +216,8 @@ class TestBundle:
 
 
 class TestRedaction:
+    """Tests for PII redaction when writing audit events and bundles."""
+
     @pytest.mark.asyncio
     async def test_email_redacted_in_audit_log(self, writer_with_redaction: AuditWriter) -> None:
         event = AuditEvent(
@@ -244,6 +277,8 @@ class TestRedaction:
 
 
 class TestHashContent:
+    """Tests for the static hash_content SHA-256 helper."""
+
     def test_deterministic(self) -> None:
         h1 = AuditWriter.hash_content("hello world")
         h2 = AuditWriter.hash_content("hello world")

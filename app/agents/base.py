@@ -69,6 +69,13 @@ class LLMAgent:
         llm: Any,
         prompt_loader: PromptLoader | None = None,
     ):
+        """Initialize the LLMAgent with an LLM backend and optional prompt loader.
+
+        Args:
+            llm: The ChatOpenAI (or compatible) LLM instance for structured output.
+            prompt_loader: Optional loader for system prompt templates; falls back
+                to a generic prompt if not provided.
+        """
         self._llm = llm
         self._prompt_loader = prompt_loader
 

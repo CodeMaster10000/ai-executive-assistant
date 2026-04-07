@@ -1,3 +1,5 @@
+"""SQLAlchemy model for job opportunities discovered by scout agents."""
+
 import uuid
 from datetime import datetime, timezone
 

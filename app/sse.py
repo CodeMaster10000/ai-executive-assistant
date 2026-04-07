@@ -1,3 +1,5 @@
+"""Server-Sent Events manager for broadcasting real-time run progress to subscribers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -10,6 +12,7 @@ class RunEventManager:
     """Manages per-run SSE event queues with history replay for late subscribers."""
 
     def __init__(self) -> None:
+        """Initialize the event manager with empty queue, history, and closed-run registries."""
         self._queues: dict[str, list[asyncio.Queue[dict[str, Any] | None]]] = defaultdict(list)
         self._history: dict[str, list[dict[str, Any]]] = defaultdict(list)
         self._closed: set[str] = set()
@@ -37,7 +40,7 @@ class RunEventManager:
             await queue.put(event)
 
     async def close(self, run_id: str) -> None:
-        """Send a termination sentinel to live subscribers and mark run as closed."""
+        """Send a termination sentinel to live subscribers and mark the run as closed."""
         self._closed.add(run_id)
         for queue in self._queues.get(run_id, []):
             await queue.put(None)
