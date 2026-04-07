@@ -808,7 +808,7 @@ class TestMainHelpers:
 
         mock_app = MagicMock()
         async with lifespan(mock_app):
-            pass
+            pass  # __aexit__ triggers the cleanup under test
 
         mock_conn.run_sync.assert_called_once()
         mock_admin.assert_awaited_once()

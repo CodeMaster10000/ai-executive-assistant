@@ -39,7 +39,7 @@ from app.graphs.log import (
 def _make_async_agent(name: str = "test_agent", result: dict | None = None):
     """Return an async callable with agent_name attribute."""
 
-    async def agent(state: dict[str, Any]) -> dict[str, Any]:
+    def agent(state: dict[str, Any]) -> dict[str, Any]:
         return result if result is not None else {"output": "ok"}
 
     agent.agent_name = name
@@ -219,7 +219,7 @@ class TestBuildVerificationDict:
         verifier = MagicMock(spec=Verifier)
         verifier.verify.return_value = mock_verification
 
-        vdict, status = _build_verification_dict(verifier, "web_scrapers", {})
+        _, status = _build_verification_dict(verifier, "web_scrapers", {})
         assert status == "partial"
 
 
@@ -422,7 +422,7 @@ class TestMakeFanOutNode:
     """Tests for the make_fan_out_node multi-scraper factory."""
 
     async def test_runs_scrapers_and_merges(self):
-        async def scraper(state):
+        def scraper(state):
             cat = state.get("search_category", "")
             return {f"raw_{cat}_results": [{"title": f"{cat} item"}]}
 
@@ -438,7 +438,7 @@ class TestMakeFanOutNode:
         assert len(result["raw_cert_results"]) == 1
 
     async def test_collects_errors(self):
-        async def scraper(state):
+        def scraper(state):
             cat = state.get("search_category", "")
             return {f"raw_{cat}_results": [], "errors": [f"{cat} failed"]}
 
@@ -477,7 +477,7 @@ class TestMakeFanOutNode:
         """Test that scraper_overrides replaces the default scraper for a category."""
         default_scraper = _make_async_agent("default", {"raw_job_results": [{"from": "default"}]})
 
-        async def override_scraper(state):
+        def override_scraper(state):
             return {"raw_job_results": [{"from": "override"}]}
 
         override_scraper.agent_name = "override"
@@ -491,7 +491,7 @@ class TestMakeFanOutNode:
         assert result["raw_job_results"][0]["from"] == "override"
 
     async def test_filtered_urls_collected(self):
-        async def scraper(state):
+        def scraper(state):
             cat = state.get("search_category", "")
             return {
                 f"raw_{cat}_results": [],

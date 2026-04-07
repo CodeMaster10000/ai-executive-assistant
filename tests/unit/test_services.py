@@ -425,9 +425,9 @@ class TestCreateRun:
         profile = _make_profile(cv_data=b"fake-pdf")
         db.get.return_value = profile
 
-        mock_run = _make_run(id="new-run", status="pending")
+        _make_run(id="new-run", status="pending")
         # After db.commit + db.refresh, the run should have an id
-        async def _refresh(obj):
+        def _refresh(obj):
             obj.id = "new-run"
             obj.profile_id = "prof-1"
             obj.mode = "daily"
@@ -435,7 +435,6 @@ class TestCreateRun:
             obj.started_at = None
             obj.finished_at = None
             obj.verifier_status = None
-            pass
 
         db.refresh = AsyncMock(side_effect=_refresh)
 
@@ -639,7 +638,7 @@ class TestRegisterUser:
                 first_name="A", last_name="B",
                 email="a@b.com", password="Password1",
             )
-            user, access, refresh = await register_user(db, body)
+            _, access, refresh = await register_user(db, body)
 
         assert access == "at-new"
         assert refresh == "rt-new"
@@ -834,7 +833,7 @@ class TestGoogleLogin:
         db.execute.return_value = _mock_execute_scalar_one(user)
 
         google_info = {"google_id": "g-123", "email": "a@g.com"}
-        returned_user, access, refresh = await google_login(db, google_info)
+        returned_user, access, _ = await google_login(db, google_info)
         assert access == "at"
         assert returned_user is user
 
@@ -1673,7 +1672,7 @@ class TestUpdateResultTitle:
         item = MagicMock(id="j1", profile_id="prof-1", title="Old")
         mock_get.return_value = item
 
-        result = await update_result_title(db, MagicMock, "prof-1", "j1", "New Title")
+        await update_result_title(db, MagicMock, "prof-1", "j1", "New Title")
         assert item.title == "New Title"
         db.commit.assert_called_once()
 
@@ -1809,9 +1808,9 @@ class TestCreateProfile:
         from app.services.profile_service import create_profile
 
         db = _mock_db()
-        profile = _make_profile()
+        _make_profile()
 
-        async def _refresh(obj):
+        def _refresh(obj):
             obj.id = "prof-new"
             obj.name = "NewProf"
             obj.targets = '["a"]'
@@ -1833,7 +1832,7 @@ class TestCreateProfile:
         db.refresh = AsyncMock(side_effect=_refresh)
         body = ProfileCreate(name="NewProf", targets=["a"])
 
-        result = await create_profile(db, body, owner_id="user-1")
+        await create_profile(db, body, owner_id="user-1")
         db.add.assert_called_once()
         db.commit.assert_called_once()
 
@@ -1894,13 +1893,14 @@ class TestUpdateProfile:
         db.execute.return_value = _mock_execute_result([])
 
         async def _refresh(obj):
+            # Simple mock to represent database refresh
             pass
 
         db.refresh = AsyncMock(side_effect=_refresh)
 
         body = ProfileUpdate(name="Updated Name")
         with patch("app.services.profile_service._check_name_unique", new_callable=AsyncMock):
-            result = await update_profile(db, "prof-1", body)
+            await update_profile(db, "prof-1", body)
 
         db.commit.assert_called_once()
 
@@ -1969,11 +1969,12 @@ class TestUploadCv:
         db.get.return_value = profile
 
         async def _refresh(obj):
+            # Simple mock to represent database refresh
             pass
 
         db.refresh = AsyncMock(side_effect=_refresh)
 
-        result = await upload_cv(db, "prof-1", "resume.pdf", b"pdf-content")
+        await upload_cv(db, "prof-1", "resume.pdf", b"pdf-content")
         assert profile.cv_data == b"pdf-content"
         assert profile.cv_filename == "resume.pdf"
         assert profile.cv_summary is None

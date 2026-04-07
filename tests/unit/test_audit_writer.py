@@ -119,14 +119,6 @@ class TestAppendAndRead:
         assert events[0]["event_type"] == "agent_start"
 
     @pytest.mark.asyncio
-    async def test_single_append_writes_valid_json_line(self, writer: AuditWriter) -> None:
-        event = AuditEvent(timestamp="t1", event_type="agent_start", agent="scout")
-        await writer.append("run-001", event)
-        events = await writer.read_log("run-001")
-        assert len(events) == 1
-        assert events[0]["event_type"] == "agent_start"
-
-    @pytest.mark.asyncio
     async def test_multiple_appends_in_order(self, writer: AuditWriter) -> None:
         for i in range(5):
             event = AuditEvent(timestamp=f"t{i}", event_type="agent_start", agent=f"agent_{i}")

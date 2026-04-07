@@ -930,7 +930,7 @@ class TestCreateCoverLetterFullPath:
         )
 
         # After flush/commit/refresh, the CL and Run objects get IDs
-        async def _refresh(obj):
+        def _refresh(obj):
             if not hasattr(obj, '_refreshed'):
                 obj._refreshed = True
                 obj.id = "cl-new"
@@ -1086,7 +1086,7 @@ class TestImportProfile:
             "targets": ["backend"],
             "skills": ["Python"],
         }
-        result = await import_profile(db, data, owner_id="user-1")
+        await import_profile(db, data, owner_id="user-1")
 
         mock_create.assert_called_once()
         call_args = mock_create.call_args
@@ -1103,7 +1103,7 @@ class TestImportProfile:
         mock_create.return_value = MagicMock(id="new-prof")
 
         db = AsyncMock()
-        result = await import_profile(db, {}, owner_id="user-1")
+        await import_profile(db, {}, owner_id="user-1")
 
         call_args = mock_create.call_args
         body = call_args.args[1]

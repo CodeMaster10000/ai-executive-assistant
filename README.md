@@ -308,7 +308,7 @@ The API documentation is available at [http://localhost:8000/docs](http://localh
 pytest
 ```
 
-Tests run against an in-memory SQLite database. No external services needed. The test suite has ~99% code coverage across 893 tests (all LLM calls are mocked).
+Tests run against an in-memory SQLite database. No external services needed. The test suite has ~98% code coverage across 901 tests (all LLM calls are mocked).
 
 ---
 

@@ -489,7 +489,7 @@ class TestRunEndpoints:
 
     @pytest.mark.asyncio
     async def test_list_all_runs(self, client, db_session, admin_headers):
-        profile, _ = await _setup_profile_and_run(db_session, email_suffix="run9")
+        await _setup_profile_and_run(db_session, email_suffix="run9")
         resp = await client.get("/api/runs?limit=5", headers=admin_headers)
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)

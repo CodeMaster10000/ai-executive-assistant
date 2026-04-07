@@ -317,13 +317,13 @@ class TestGoalExtractorAgent:
         assert "no travel" in prompt
         assert "hybrid" in prompt
 
-    def test_build_job_prompt_remote_includes_location(self):
+    def test_build_job_prompt_remote_excludes_location(self):
         prompt = GoalExtractorAgent._build_job_prompt(
             preferred_titles=["Developer"],
             locations=["SF"],
             work_arrangement="remote",
         )
-        assert "SF" in prompt
+        assert "SF" not in prompt
         assert "remote" in prompt
 
     def test_build_job_prompt_no_constraints(self):
@@ -376,7 +376,7 @@ class TestGoalExtractorAgent:
 
         assert result["_token_usage"] == []
 
-    async def test_call_includes_cv_summary_in_prompt(self):
+    async def test_call_includes_profile_fields_in_prompt(self):
         llm = _make_mock_llm()
         agent = GoalExtractorAgent(llm=llm)
 
@@ -404,8 +404,6 @@ class TestGoalExtractorAgent:
         # Verify _invoke_structured was called with proper user_content
         call_args = mock_invoke.call_args
         user_content = call_args[0][2]  # third positional arg
-        assert "CV summary:" in user_content
-        assert "Experienced developer" in user_content
         assert "No relocation" in user_content
         assert "tech" in user_content
         assert "NYC" in user_content

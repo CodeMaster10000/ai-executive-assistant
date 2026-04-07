@@ -19,30 +19,30 @@ from app.sse import RunEventManager
 class TestSubscribeUnsubscribe:
     """Tests for subscribe and unsubscribe mechanics."""
 
-    async def test_subscribe_returns_queue(self):
+    def test_subscribe_returns_queue(self):
         mgr = RunEventManager()
         queue = mgr.subscribe("run1")
         assert isinstance(queue, asyncio.Queue)
 
-    async def test_subscribe_registers_queue(self):
+    def test_subscribe_registers_queue(self):
         mgr = RunEventManager()
         queue = mgr.subscribe("run1")
         assert queue in mgr._queues["run1"]
 
-    async def test_unsubscribe_removes_queue(self):
+    def test_unsubscribe_removes_queue(self):
         mgr = RunEventManager()
         queue = mgr.subscribe("run1")
         assert len(mgr._queues["run1"]) == 1
         mgr.unsubscribe("run1", queue)
         assert len(mgr._queues["run1"]) == 0
 
-    async def test_unsubscribe_nonexistent_run_noop(self):
+    def test_unsubscribe_nonexistent_run_noop(self):
         mgr = RunEventManager()
         queue = asyncio.Queue()
         # Should not raise
         mgr.unsubscribe("nonexistent", queue)
 
-    async def test_unsubscribe_wrong_queue_noop(self):
+    def test_unsubscribe_wrong_queue_noop(self):
         mgr = RunEventManager()
         q1 = mgr.subscribe("run1")
         q2 = asyncio.Queue()  # never subscribed
@@ -91,7 +91,7 @@ class TestPublish:
         q1 = mgr.subscribe("run1")
         q2 = mgr.subscribe("run2")
         await mgr.publish("run1", {"type": "for_run1"})
-        assert not q2.empty() is False or q2.qsize() == 0
+        assert q2.empty() is not False or q2.qsize() == 0
         assert q1.get_nowait() == {"type": "for_run1"}
         assert q2.empty()
 
@@ -231,7 +231,7 @@ class TestEventStream:
         await mgr.close("run1")
 
         async for _ in mgr.event_stream("run1"):
-            pass
+            break
 
         # After iteration the queue should be unsubscribed
         # Since run was closed, _queues["run1"] was already removed

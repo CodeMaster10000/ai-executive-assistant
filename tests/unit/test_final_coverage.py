@@ -796,7 +796,7 @@ class TestRunServiceFreeTrial:
         body = MagicMock()
         body.mode = "daily"
 
-        async def fake_refresh(obj):
+        def fake_refresh(obj):
             obj.id = "run-1"
             obj.profile_id = "p1"
             obj.mode = "daily"

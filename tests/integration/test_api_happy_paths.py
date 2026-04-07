@@ -942,7 +942,7 @@ class TestCrossProfileRuns:
     async def test_list_all_runs_with_limit(self, client, db_session, admin_headers):
         """GET /api/runs respects limit parameter."""
         _, profile, _ = await _make_profile_and_run(db_session, suffix="xrun1")
-        for i in range(3):
+        for _ in range(3):
             db_session.add(
                 Run(profile_id=profile.id, mode="daily", status="completed")
             )

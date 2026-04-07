@@ -404,7 +404,7 @@ class TestFetchAndClassifyUrls:
     async def test_404_rejected(self, agent):
         agent._fetch_tool.ainvoke = AsyncMock(return_value="HTTP 404 Not Found\n\n")
         items = [WebScraperResult(title="Gone", url="https://example.com/gone")]
-        valid, rate_limited, rejected = await agent._fetch_and_classify_urls(
+        valid, _, rejected = await agent._fetch_and_classify_urls(
             items, "cert",
         )
         assert len(valid) == 0
@@ -424,7 +424,7 @@ class TestFetchAndClassifyUrls:
 
     async def test_empty_url_goes_to_valid(self, agent):
         items = [WebScraperResult(title="No URL", url="")]
-        valid, rate_limited, rejected = await agent._fetch_and_classify_urls(
+        valid, _, _ = await agent._fetch_and_classify_urls(
             items, "cert",
         )
         assert len(valid) == 1
@@ -432,7 +432,7 @@ class TestFetchAndClassifyUrls:
     async def test_fetch_exception_rejected(self, agent):
         agent._fetch_tool.ainvoke = AsyncMock(side_effect=RuntimeError("boom"))
         items = [WebScraperResult(title="Err", url="https://example.com/err")]
-        valid, rate_limited, rejected = await agent._fetch_and_classify_urls(
+        valid, _, rejected = await agent._fetch_and_classify_urls(
             items, "cert",
         )
         assert len(valid) == 0
@@ -609,11 +609,11 @@ class TestRunToolLoop:
         llm_with_tools = AsyncMock()
         llm_with_tools.ainvoke = AsyncMock(return_value=always_tool)
 
-        final, search_count, step = await agent._run_tool_loop(
+        _, _, steps = await agent._run_tool_loop(
             always_tool, [], llm_with_tools, tool_map,
             [], "job", 3, 0,
         )
-        assert step == 3
+        assert steps == 3
 
     async def test_nudge_when_below_min_searches(self, agent):
         search = agent._search_tool
@@ -640,9 +640,9 @@ class TestRunToolLoop:
         messages = []
         usages = []
 
-        final, search_count, step = await agent._run_tool_loop(
+        _, search_count, step = await agent._run_tool_loop(
             no_tools, messages, llm_with_tools, tool_map,
-            usages, "job", 5, 2,  # min_searches=2
+            usages, "job", 5, 2,
         )
         assert search_count == 1
         assert step == 1
@@ -743,9 +743,9 @@ class TestRetryInsufficientResults:
     async def test_skips_when_min_results_zero(self, agent):
         results = []
         filtered = []
-        r, f, sc, st = await agent._retry_insufficient_results(
+        r, _, sc, _ = await agent._retry_insufficient_results(
             results, filtered, set(), [], AsyncMock(), {}, [], "job",
-            "prompt", 0, 5, 0, 0,  # min_results=0
+            "prompt", 0, 5, 0, 0,
         )
         assert r == []
         assert sc == 0
@@ -755,7 +755,7 @@ class TestRetryInsufficientResults:
             WebScraperResult(title="A", url="https://a.com"),
             WebScraperResult(title="B", url="https://b.com"),
         ]
-        r, f, sc, st = await agent._retry_insufficient_results(
+        r, _, sc, _ = await agent._retry_insufficient_results(
             results, [], set(), [], AsyncMock(), {}, [], "job",
             "prompt", 2, 5, 0, 0,  # min_results=2 and already have 2
         )
@@ -785,9 +785,9 @@ class TestRetryInsufficientResults:
         ):
             search = agent._search_tool
             tool_map = {search.name: search}
-            r, f, sc, st = await agent._retry_insufficient_results(
+            r, _, _, _ = await agent._retry_insufficient_results(
                 results, [], set(), [], llm_with_tools, tool_map,
-                [], "cert", "prompt", 1, 10, 0, 0,  # min_results=1
+                [], "cert", "prompt", 1, 10, 0, 0,
             )
             assert len(r) >= 1
 
@@ -798,7 +798,7 @@ class TestRetryInsufficientResults:
         refuse = _make_ai_message(content="cannot search more", tool_calls=[])
         llm_with_tools.ainvoke = AsyncMock(return_value=refuse)
 
-        r, f, sc, st = await agent._retry_insufficient_results(
+        r, _, _, _ = await agent._retry_insufficient_results(
             results, [], set(), [], llm_with_tools, {}, [], "job",
             "prompt", 5, 10, 0, 0,
         )
@@ -812,7 +812,7 @@ class TestRetryInsufficientResults:
         refuse = _make_ai_message(content="no", tool_calls=[])
         llm_with_tools.ainvoke = AsyncMock(return_value=refuse)
 
-        r, f, sc, st = await agent._retry_insufficient_results(
+        await agent._retry_insufficient_results(
             results, [], set(), [], llm_with_tools, {}, [], "job",
             "prompt", 10, 20, 0, 0,
         )
@@ -821,7 +821,7 @@ class TestRetryInsufficientResults:
 
     async def test_skips_when_llm_with_tools_is_none(self, agent):
         results = []
-        r, f, sc, st = await agent._retry_insufficient_results(
+        r, _, sc, _ = await agent._retry_insufficient_results(
             results, [], set(), [], None, {}, [], "job",
             "prompt", 5, 10, 0, 0,
         )
@@ -1001,7 +1001,7 @@ class TestCallIntegration:
             return_value=(parsed, None),
         ):
             state = {"search_prompt": "test", "search_category": ""}
-            result = await agent(state)
+            await agent(state)
 
         loader.load.assert_called_once()
         assert loader.load.call_args[0][0] == "web_scraper/job"
