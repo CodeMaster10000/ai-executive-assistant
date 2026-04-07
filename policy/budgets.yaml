@@ -19,7 +19,7 @@ agents:
   web_scraper_job_weekly:
     max_steps: 15
     min_searches: 20
-    min_results: 7
+    min_results: 5
     max_input_tokens: 200000
     max_output_tokens: 150000
     type: llm
