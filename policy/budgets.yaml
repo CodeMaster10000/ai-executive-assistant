@@ -10,17 +10,17 @@ agents:
     max_output_tokens: 16000
     type: llm
   web_scraper_job_daily:
-    max_steps: 15
-    min_searches: 20
-    min_results: 4
-    max_input_tokens: 200000
+    max_steps: 10
+    min_searches: 10
+    min_results: 3
+    max_input_tokens: 150000
     max_output_tokens: 100000
     type: llm
   web_scraper_job_weekly:
     max_steps: 15
     min_searches: 20
-    min_results: 8
-    max_input_tokens: 200000
+    min_results: 7
+    max_input_tokens: 250000
     max_output_tokens: 100000
     type: llm
   web_scraper_event_daily:
