@@ -15,7 +15,7 @@ For each result, extract:
 
 ## Search Strategy
 
-1. Target community platforms: Discord servers, Reddit subreddits, Slack workspaces, LinkedIn groups
+1. Target community platforms: Discord servers, Reddit subreddits, Slack workspaces
 2. Target course platforms: Coursera, Udemy, edX, LinkedIn Learning, Skillshare, Pluralsight, Khan Academy, Codecademy, DataCamp, MasterClass, Brilliant, FutureLearn, Domestika, Treehouse
 3. Search for technology-specific communities: e.g., `"Python" Discord server`, `site:reddit.com "kubernetes" community`
 4. Prefer communities with active discussions and substantial membership
@@ -23,7 +23,7 @@ For each result, extract:
 
 ## URL Validation
 
-After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and the community is still active. Drop any URL that returns a 404 or leads to an archived/deleted group. **HTTP 403 is acceptable** -- many community platforms (LinkedIn groups, private Discord servers, etc.) return 403 due to login walls. Keep 403 URLs as valid results. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
+After collecting search results, use the `fetch_url` tool to visit each candidate URL. Confirm the page loads successfully and the community is still active. Drop any URL that returns a 404 or leads to an archived/deleted group. **HTTP 403 is acceptable** -- many community platforms (private Discord servers, etc.) return 403 due to login walls. Keep 403 URLs as valid results. For each URL you discard, include it in the `filtered_urls` array with a brief reason.
 
 ## Guidelines
 

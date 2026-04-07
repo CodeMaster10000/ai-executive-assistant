@@ -28,17 +28,18 @@ Given the user's profile targets (career goals), constraints, and optionally the
 - **Write full directive sentences**: Each prompt must be read as a clear instruction, not a search-engine keyword string.
 - **Include the year ({today}) for events** so results are current.
 - **Do not hallucinate details**: Only reference career goals, job titles, industries, locations, and seniority levels that appear in the user's profile. Do NOT inject specific technical skills or technologies into the prompts.
-- **Include 2-3 recommended websites in each directive** so the web scraper targets the right sources. Certifications: official vendor sites (AWS, Microsoft Learn, Google Cloud, Salesforce Trailhead, CompTIA), Credly, Accredible. Courses: Coursera, Udemy, edX, LinkedIn Learning, DataCamp, Pluralsight, Skillshare, freeCodeCamp. Events: Eventbrite, Meetup, Luma, LinkedIn Events, Hopin, Airmeet. Groups: Discord, Reddit, LinkedIn Groups, Slack. Trends: Google Trends, Exploding Topics, Glimpse, TrendHunter, SparkToro, Reddit (r/popular, r/technology), X (Twitter) Trending, BuzzSumo, TechCrunch, Hacker News, ArXiv.
+- **Location belongs in event_prompt ONLY**: Do NOT include locations in cert_prompt, course_prompt, group_prompt, or trend_prompt. Locations are only relevant for finding events near the user. Job search handles location separately.
+- **Include 2-3 recommended websites in each directive** so the web scraper targets the right sources. Certifications: official vendor sites (AWS, Microsoft Learn, Google Cloud, Salesforce Trailhead, CompTIA), Credly, Accredible. Courses: Coursera, Udemy, edX, LinkedIn Learning, DataCamp, Pluralsight, Skillshare, freeCodeCamp. Events: Eventbrite, Meetup, Luma, AllEvents, 10times.com, dev.events, Komunity.com, Guild. Groups: Discord, Reddit, Slack. Trends: Google Trends, Exploding Topics, Glimpse, TrendHunter, SparkToro, Reddit (r/popular, r/technology), X (Twitter) Trending, BuzzSumo, TechCrunch, Hacker News, ArXiv.
 
 ## Category-Specific Rules
 
 ### event_prompt
 - If **event topics** are set, use ONLY those topics to generate the event_prompt. Ignore career goals, job titles, and industries for the event prompt in this case.
 - If event topics are NOT set, fall back to **career goals**, **preferred job titles**, and **target industries**.
-- **Location rules are strict**:
-  - If event attendance is "local": prefer in-person events near the user's preferred locations.
+- **Location rules by attendance preference**:
+  - If event attendance is "local": search for in-person events near the user's preferred locations. This is the ONLY case where locations appear in the event prompt.
   - If event attendance is "remote": search for virtual/online events only. Do NOT mention locations.
-  - If event attendance is "no preference" or NOT SET: search for both in-person and virtual events. Do NOT prioritize one over the other. Do NOT mention or favor specific locations unless event attendance is explicitly "local".
+  - If event attendance is "no preference" or NOT SET: search for both in-person and virtual events. Do NOT mention locations.
 - Do NOT include skills in the event prompt. Do NOT factor in learning budget, learning format, or time commitment.
 
 ### group_prompt
@@ -50,9 +51,8 @@ When the user provides structured profile fields, use them as hard constraints:
 
 ### Career & Job Fields
 - **Preferred job titles**: These are provided for context (e.g., to inform trend, event, and group prompts). Job search is handled separately.
-- **Experience level**: Qualify searches with the seniority (e.g., "senior", "lead"). Apply to cert_prompt (match certification difficulty to experience).
 - **Target industries**: Focus cert_prompt, course_prompt, and trend_prompt on these industries. For group_prompt, include industries to find industry-specific communities. For event_prompt, find industry-relevant events.
-- **Preferred locations**: Include in event_prompt when event attendance is "local" or "no preference".
+- **Preferred locations**: Only include in event_prompt when event attendance is "local". Do NOT include in cert_prompt, course_prompt, group_prompt, or trend_prompt.
 - **Event attendance**: Controls event_prompt format preference (see Category-Specific Rules above).
 - **Event topics**: When set, these are the ONLY topics used for event_prompt. Override all other signals (career goals, titles, industries) for event search. See Category-Specific Rules above.
 
@@ -67,14 +67,13 @@ When the user provides structured profile fields, use them as hard constraints:
 
 - **cert_prompt**: "Search aws.amazon.com and Credly for AWS cloud certifications"
 - **course_prompt**: "Search Coursera, Udemy, and edX for AWS certification preparation courses and software architecture courses"
-- **event_prompt**: "Search Eventbrite, Meetup, and Luma for 2026 software architecture and cloud computing conferences and meetups"
-- **group_prompt**: "Search Discord, Reddit, Slack and LinkedIn Groups for backend development and cloud architecture communities and forums"
+- **event_prompt**: "Search Eventbrite, Meetup, Luma, AllEvents, 10times.com, dev.events, Komunity.com, and Guild for 2026 software architecture and cloud computing conferences and meetups"
+- **group_prompt**: "Search Discord, Reddit, and Slack for backend development and cloud architecture communities and forums"
 - **trend_prompt**: "Search Google Trends, Exploding Topics, Reddit r/technology, TechCrunch, and Hacker News for emerging trends and developments in backend development, cloud-native architecture, and enterprise software"
 
 ### Example 2 (with structured fields and event topics)
 **Profile targets**: ["Transition to AI/ML engineering", "Find a senior Python role"]
 **Preferred job titles**: ["Senior ML Engineer", "AI Platform Engineer"]
-**Experience level**: senior
 **Target industries**: ["fintech", "AI/ML"]
 **Preferred locations**: ["Berlin"]
 **Event attendance**: remote
@@ -82,10 +81,10 @@ When the user provides structured profile fields, use them as hard constraints:
 **Target certifications**: ["TensorFlow Developer Certificate", "AWS Machine Learning Specialty"]
 **Learning format**: online
 
-- **cert_prompt**: "Search tensorflow.org and aws.amazon.com for the TensorFlow Developer Certificate and AWS Machine Learning Specialty certification at the senior level"
+- **cert_prompt**: "Search tensorflow.org and aws.amazon.com for the TensorFlow Developer Certificate and AWS Machine Learning Specialty certification"
 - **course_prompt**: "Search Coursera, Udemy, and DataCamp for online courses that prepare for the TensorFlow Developer Certificate and AWS Machine Learning Specialty certification"
-- **event_prompt**: "Search Eventbrite, Meetup, and Luma for 2026 virtual MLOps summits and AI ethics panels"
-- **group_prompt**: "Search Discord, Slack, Reddit, and LinkedIn Groups for AI/ML engineering and fintech communities and discussion forums"
+- **event_prompt**: "Search Eventbrite, Meetup, Luma, AllEvents, 10times.com, dev.events, Komunity.com, and Guild for 2026 virtual MLOps summits and AI ethics panels"
+- **group_prompt**: "Search Discord, Slack, and Reddit for AI/ML engineering and fintech communities and discussion forums"
 - **trend_prompt**: "Search Google Trends, Exploding Topics, Reddit r/technology, TechCrunch, and ArXiv for emerging trends in AI engineering and fintech"
 
 ### Example 3 (with constraints, no industries)
@@ -96,6 +95,6 @@ When the user provides structured profile fields, use them as hard constraints:
 
 - **cert_prompt**: "Search official CompTIA and Offensive Security sites for cybersecurity certifications such as CompTIA Security+ or OSCP"
 - **course_prompt**: "Search Coursera, Udemy, and Pluralsight for cybersecurity certification preparation and DevOps training courses, preferring online/remote courses"
-- **event_prompt**: "Search Eventbrite, Meetup, and Luma for 2026 in-person cybersecurity and DevOps conferences and meetups in San Francisco"
-- **group_prompt**: "Search Discord, Slack, Reddit, and LinkedIn Groups for cybersecurity and DevOps communities and forums"
+- **event_prompt**: "Search Eventbrite, Meetup, Luma, AllEvents, 10times.com, dev.events, Komunity.com, and Guild for 2026 in-person cybersecurity and DevOps conferences and meetups in San Francisco"
+- **group_prompt**: "Search Discord, Slack, and Reddit for cybersecurity and DevOps communities and forums"
 - **trend_prompt**: "Search Google Trends, Exploding Topics, BuzzSumo, Reddit r/technology, and TechCrunch for emerging trends in DevSecOps and cloud security"

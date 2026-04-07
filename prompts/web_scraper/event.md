@@ -19,7 +19,8 @@ For each result, extract:
    - **Ticketing & Public Events**: Eventbrite, Humanitix
    - **General Event Management**: Cvent, Bizzabo
    - **Virtual & Hybrid**: Hopin, Airmeet
-   - **Community & Social**: Meetup, LinkedIn Events, Luma
+   - **Community & Social**: Meetup, Luma, Komunity.com, Guild
+   - **Event Directories**: AllEvents, 10times.com, dev.events
    - **Webinar-Focused**: Livestorm, Demio
    - **Conference & Association**: Cadmium (Eventscribe), Sched
    - **Video Conferencing**: Zoom Events, Webex Events

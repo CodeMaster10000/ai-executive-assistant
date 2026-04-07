@@ -317,13 +317,13 @@ class TestGoalExtractorAgent:
         assert "no travel" in prompt
         assert "hybrid" in prompt
 
-    def test_build_job_prompt_remote_skips_location(self):
+    def test_build_job_prompt_remote_includes_location(self):
         prompt = GoalExtractorAgent._build_job_prompt(
             preferred_titles=["Developer"],
             locations=["SF"],
             work_arrangement="remote",
         )
-        assert "SF" not in prompt
+        assert "SF" in prompt
         assert "remote" in prompt
 
     def test_build_job_prompt_no_constraints(self):

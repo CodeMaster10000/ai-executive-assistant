@@ -91,9 +91,6 @@ class GoalExtractorAgent(LLMAgent):
             user_parts.append(f"Target certifications: {json.dumps(target_certs)}")
         if learning_format:
             user_parts.append(f"Learning format: {learning_format}")
-        if cv_summary:
-            user_parts.append(f"CV summary:\n{cv_summary[:3000]}")
-
         user_content = "\n".join(user_parts)
         result, usage = await self._invoke_structured(GoalExtractorOutput, system_prompt, user_content)
 
