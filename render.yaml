@@ -55,6 +55,9 @@ services:
         sync: false
 
       ## Security
+
+      - key: FREE_RUN_LIMIT
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: APP_BASE_URL
