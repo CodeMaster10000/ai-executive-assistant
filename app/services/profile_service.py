@@ -5,13 +5,12 @@ import hashlib
 import io
 import json
 import logging
-import shutil
 from pathlib import Path
 
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 from pypdf import PdfReader
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -80,9 +79,9 @@ def profile_to_read(profile: UserProfile) -> ProfileRead:
 async def _check_name_unique(
     db: AsyncSession, owner_id: str, name: str, exclude_id: str | None = None
 ) -> None:
-    """Raise ValueError if another profile with the same owner+name exists."""
+    """Raise ValueError if another profile with the same owner+name exists (case-insensitive)."""
     query = select(UserProfile).where(
-        UserProfile.owner_id == owner_id, UserProfile.name == name
+        UserProfile.owner_id == owner_id, func.lower(UserProfile.name) == name.lower()
     )
     if exclude_id:
         query = query.where(UserProfile.id != exclude_id)
@@ -184,14 +183,7 @@ async def delete_profile(db: AsyncSession, profile_id: str) -> bool:
     await db.delete(profile)
     await db.commit()
 
-    # Clean up filesystem artifacts (run in thread to avoid blocking event loop)
-    def _cleanup() -> None:
-        for rid in run_ids:
-            run_dir = settings.artifacts_dir / "runs" / rid
-            if run_dir.exists():
-                shutil.rmtree(run_dir, ignore_errors=True)
-
-    await asyncio.to_thread(_cleanup)
+    # Audit events and bundles are cascade-deleted via FK on runs.id
     return True
 
 
