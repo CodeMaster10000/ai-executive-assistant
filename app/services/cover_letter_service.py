@@ -154,9 +154,7 @@ async def generate_cover_letter(
             profile_name = candidate_name
 
         policy_engine = PolicyEngine(settings.policy_dir)
-        audit_writer = AuditWriter(
-            artifacts_dir=settings.artifacts_dir, policy_engine=policy_engine
-        )
+        audit_writer = AuditWriter(policy_engine=policy_engine)
 
         await audit_writer.append(
             run_id,
@@ -206,7 +204,6 @@ async def generate_cover_letter(
             if run:
                 run.status = "completed"
                 run.finished_at = datetime.now(timezone.utc)
-                run.audit_path = str(settings.artifacts_dir / "runs" / run_id)
 
             await session.commit()
 

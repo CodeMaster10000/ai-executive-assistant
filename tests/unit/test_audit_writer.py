@@ -1,9 +1,8 @@
-"""Tests for the AuditWriter."""
+"""Tests for the AuditWriter (PostgreSQL-backed)."""
 
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 import yaml
@@ -18,17 +17,12 @@ from app.engine.policy_engine import PolicyEngine
 
 
 @pytest.fixture()
-def artifacts_dir(tmp_path: Path) -> Path:
-    return tmp_path / "artifacts"
+def writer(test_session_factory) -> AuditWriter:
+    return AuditWriter()
 
 
 @pytest.fixture()
-def writer(artifacts_dir: Path) -> AuditWriter:
-    return AuditWriter(artifacts_dir=artifacts_dir)
-
-
-@pytest.fixture()
-def policy_dir(tmp_path: Path) -> Path:
+def policy_dir(tmp_path):
     pd = tmp_path / "policy"
     pd.mkdir()
     redaction = {
@@ -50,9 +44,9 @@ def policy_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def writer_with_redaction(artifacts_dir: Path, policy_dir: Path) -> AuditWriter:
+def writer_with_redaction(test_session_factory, policy_dir) -> AuditWriter:
     pe = PolicyEngine(policy_dir)
-    return AuditWriter(artifacts_dir=artifacts_dir, policy_engine=pe)
+    return AuditWriter(policy_engine=pe)
 
 
 # ------------------------------------------------------------------
@@ -82,17 +76,18 @@ class TestAuditEvent:
 
 
 # ------------------------------------------------------------------
-# JSONL append & read
+# Append & read (DB-backed)
 # ------------------------------------------------------------------
 
 
 class TestAppendAndRead:
     @pytest.mark.asyncio
-    async def test_append_creates_directory_and_file(self, writer: AuditWriter, artifacts_dir: Path) -> None:
+    async def test_append_and_read_single_event(self, writer: AuditWriter) -> None:
         event = AuditEvent(timestamp="t1", event_type="agent_start", agent="scout")
         await writer.append("run-001", event)
-        log_path = artifacts_dir / "runs" / "run-001" / "audit.jsonl"
-        assert log_path.exists()
+        events = await writer.read_log("run-001")
+        assert len(events) == 1
+        assert events[0]["event_type"] == "agent_start"
 
     @pytest.mark.asyncio
     async def test_single_append_writes_valid_json_line(self, writer: AuditWriter) -> None:
@@ -117,16 +112,14 @@ class TestAppendAndRead:
         assert events == []
 
     @pytest.mark.asyncio
-    async def test_each_line_is_valid_json(self, writer: AuditWriter, artifacts_dir: Path) -> None:
+    async def test_each_event_is_valid_json(self, writer: AuditWriter) -> None:
         for i in range(3):
             event = AuditEvent(timestamp=f"t{i}", event_type="output", data={"value": i})
             await writer.append("run-003", event)
-        log_path = artifacts_dir / "runs" / "run-003" / "audit.jsonl"
-        lines = log_path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 3
-        for line in lines:
-            parsed = json.loads(line)
-            assert "timestamp" in parsed
+        events = await writer.read_log("run-003")
+        assert len(events) == 3
+        for ev in events:
+            assert "timestamp" in ev
 
 
 # ------------------------------------------------------------------
@@ -136,16 +129,17 @@ class TestAppendAndRead:
 
 class TestBundle:
     @pytest.mark.asyncio
-    async def test_create_bundle_writes_file(self, writer: AuditWriter, artifacts_dir: Path) -> None:
-        path = await writer.create_run_bundle(
+    async def test_create_bundle_stores_in_db(self, writer: AuditWriter) -> None:
+        await writer.create_run_bundle(
             run_id="run-100",
             profile_hash="ph123",
             policy_version_hash="pv456",
             verifier_report={"overall_status": "pass"},
             final_artifacts={"opportunities": []},
         )
-        assert path.exists()
-        assert path.name == "bundle.json"
+        bundle = await writer.read_bundle("run-100")
+        assert bundle is not None
+        assert bundle["run_id"] == "run-100"
 
     @pytest.mark.asyncio
     async def test_read_bundle_returns_contents(self, writer: AuditWriter) -> None:

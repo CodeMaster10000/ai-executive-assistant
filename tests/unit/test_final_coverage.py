@@ -820,10 +820,10 @@ class TestRunServiceFreeTrial:
 
 
 class TestRunServiceCleanup:
-    """Cover the _cleanup shutil path in delete_run."""
+    """Cover cascade delete in delete_run (no more filesystem cleanup)."""
 
     @pytest.mark.asyncio
-    async def test_delete_run_cleanup_artifacts(self):
+    async def test_delete_run_cascade(self):
         from app.services.run_service import delete_run, _running_tasks
         db = AsyncMock()
         run = MagicMock()
@@ -836,15 +836,10 @@ class TestRunServiceCleanup:
 
         _running_tasks.pop("r1", None)
 
-        with (
-            patch("app.services.run_service.settings") as mock_settings,
-            patch("app.services.run_service.asyncio") as mock_asyncio,
-        ):
-            mock_settings.artifacts_dir = MagicMock()
-            mock_asyncio.to_thread = AsyncMock()
-            result = await delete_run(db, "p1", "r1")
-            assert result is True
-            mock_asyncio.to_thread.assert_called_once()
+        result = await delete_run(db, "p1", "r1")
+        assert result is True
+        db.delete.assert_called_once_with(run)
+        db.commit.assert_called_once()
 
 
 # -----------------------------------------------------------------------

@@ -27,7 +27,6 @@ def _make_run(
     started_at=_NOW,
     finished_at=_NOW,
     verifier_status="pass",
-    audit_path="/artifacts/runs/run-1",
     created_at=_NOW,
 ):
     run = MagicMock()
@@ -38,7 +37,6 @@ def _make_run(
     run.started_at = started_at
     run.finished_at = finished_at
     run.verifier_status = verifier_status
-    run.audit_path = audit_path
     run.created_at = created_at
     return run
 
@@ -192,11 +190,11 @@ class TestUpdateRunStatus:
         run = _make_run(id="run-1", status="running")
         mock_session.get = AsyncMock(return_value=run)
 
-        await _update_run_status("run-1", "completed", audit_path="/artifacts/runs/run-1")
+        await _update_run_status("run-1", "completed", verifier_status="pass")
 
         assert run.status == "completed"
         assert run.finished_at is not None
-        assert run.audit_path == "/artifacts/runs/run-1"
+        assert run.verifier_status == "pass"
         mock_session.commit.assert_called_once()
 
     @patch("app.services.run_service.async_session_factory")
@@ -437,10 +435,6 @@ class TestExecuteRun:
         from app.services.run_service import execute_run
 
         mock_settings.policy_dir = "/policy"
-        mock_settings.artifacts_dir = MagicMock()
-        mock_settings.artifacts_dir.__truediv__ = MagicMock(return_value=MagicMock(
-            __truediv__=MagicMock(return_value="/artifacts/runs/run-1")
-        ))
 
         mock_start.return_value = True
         mock_load.return_value = {
@@ -486,7 +480,6 @@ class TestExecuteRun:
         mock_persist.assert_called_once()
         mock_update.assert_called_once_with(
             "run-1", "completed",
-            audit_path=mock_settings.artifacts_dir.__truediv__.return_value.__truediv__.return_value,
             verifier_status="pass",
         )
         mock_em.close.assert_called_once_with("run-1")
@@ -552,10 +545,6 @@ class TestExecuteRun:
         from app.services.run_service import execute_run
 
         mock_settings.policy_dir = "/policy"
-        mock_settings.artifacts_dir = MagicMock()
-        mock_settings.artifacts_dir.__truediv__ = MagicMock(return_value=MagicMock(
-            __truediv__=MagicMock(return_value="/artifacts/runs/run-1")
-        ))
 
         mock_start.return_value = True
         mock_load.return_value = {
@@ -614,10 +603,6 @@ class TestExecuteRun:
         from app.services.run_service import execute_run
 
         mock_settings.policy_dir = "/policy"
-        mock_settings.artifacts_dir = MagicMock()
-        mock_settings.artifacts_dir.__truediv__ = MagicMock(return_value=MagicMock(
-            __truediv__=MagicMock(return_value="/artifacts/runs/run-1")
-        ))
 
         mock_start.return_value = True
         mock_load.return_value = {
@@ -839,10 +824,6 @@ class TestGenerateCoverLetter:
             "app.services.cover_letter_service.settings"
         ) as mock_settings:
             mock_settings.policy_dir = "/policy"
-            mock_settings.artifacts_dir = MagicMock()
-            mock_settings.artifacts_dir.__truediv__ = MagicMock(return_value=MagicMock(
-                __truediv__=MagicMock(return_value="/artifacts/runs/run-1")
-            ))
 
             mock_compiled = AsyncMock()
             mock_compiled.ainvoke = AsyncMock(return_value={

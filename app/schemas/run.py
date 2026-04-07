@@ -34,4 +34,3 @@ class RunRead(BaseModel):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     verifier_status: str | None = None
-    audit_path: str | None = None

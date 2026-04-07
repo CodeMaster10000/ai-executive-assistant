@@ -1,14 +1,14 @@
-"""Audit writer: append-only JSONL log and run-bundle creation."""
+"""Audit writer: append-only audit log and run-bundle storage in PostgreSQL."""
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
+
+from sqlalchemy import func, select
 
 from app.engine.policy_engine import PolicyEngine
 
@@ -29,25 +29,14 @@ class AuditEvent:
 
 
 class AuditWriter:
-    """Manages append-only JSONL audit logs and run bundles under ``artifacts/runs/<run_id>/``."""
+    """Manages append-only audit events and run bundles in PostgreSQL."""
 
     def __init__(
         self,
-        artifacts_dir: Path | str = "artifacts",
         policy_engine: PolicyEngine | None = None,
+        **_kwargs: Any,
     ) -> None:
-        self._artifacts_dir = Path(artifacts_dir)
         self._policy_engine = policy_engine
-
-    # ------------------------------------------------------------------
-    # Path helpers
-    # ------------------------------------------------------------------
-
-    def _run_dir(self, run_id: str) -> Path:
-        return self._artifacts_dir / "runs" / run_id
-
-    def _log_path(self, run_id: str) -> Path:
-        return self._run_dir(run_id) / "audit.jsonl"
 
     # ------------------------------------------------------------------
     # Redaction
@@ -59,49 +48,53 @@ class AuditWriter:
         return text
 
     # ------------------------------------------------------------------
-    # JSONL append
+    # Audit event append
     # ------------------------------------------------------------------
 
-    def _append_sync(self, run_id: str, event: AuditEvent) -> None:
-        """Sync implementation of append."""
-        run_dir = self._run_dir(run_id)
-        run_dir.mkdir(parents=True, exist_ok=True)
-        log_path = self._log_path(run_id)
+    async def append(self, run_id: str, event: AuditEvent) -> None:
+        """Append a single event (with PII redaction) to the run's audit log in Postgres."""
+        from app.db import async_session_factory
+        from app.models.audit_event import AuditEventRecord
+
         raw_line = json.dumps(event.to_dict())
         redacted_line = self._redact(raw_line, "audit_log")
-        with open(log_path, "a", encoding="utf-8") as f:
-            f.write(redacted_line + "\n")
 
-    async def append(self, run_id: str, event: AuditEvent) -> None:
-        """Append a single event (with PII redaction) to the run's JSONL log."""
-        await asyncio.to_thread(self._append_sync, run_id, event)
+        async with async_session_factory() as session:
+            next_seq = await session.scalar(
+                select(func.coalesce(func.max(AuditEventRecord.sequence), 0))
+                .where(AuditEventRecord.run_id == run_id)
+            )
+            record = AuditEventRecord(
+                run_id=run_id,
+                sequence=(next_seq or 0) + 1,
+                data=redacted_line,
+            )
+            session.add(record)
+            await session.commit()
 
     # ------------------------------------------------------------------
     # Read helpers
     # ------------------------------------------------------------------
 
-    def _read_log_sync(self, run_id: str) -> list[dict[str, Any]]:
-        """Sync implementation of read_log."""
-        log_path = self._log_path(run_id)
-        if not log_path.exists():
-            return []
-        events: list[dict[str, Any]] = []
-        with open(log_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    events.append(json.loads(line))
-        return events
-
     async def read_log(self, run_id: str) -> list[dict[str, Any]]:
-        """Return all events from the run's JSONL log, in order."""
-        return await asyncio.to_thread(self._read_log_sync, run_id)
+        """Return all events from the run's audit log, in order."""
+        from app.db import async_session_factory
+        from app.models.audit_event import AuditEventRecord
+
+        async with async_session_factory() as session:
+            result = await session.execute(
+                select(AuditEventRecord.data)
+                .where(AuditEventRecord.run_id == run_id)
+                .order_by(AuditEventRecord.sequence)
+            )
+            rows = result.scalars().all()
+        return [json.loads(row) for row in rows]
 
     # ------------------------------------------------------------------
     # Bundle creation
     # ------------------------------------------------------------------
 
-    def _create_run_bundle_sync(
+    async def create_run_bundle(
         self,
         run_id: str,
         profile_hash: str,
@@ -109,10 +102,10 @@ class AuditWriter:
         verifier_report: dict[str, Any],
         final_artifacts: dict[str, Any],
         intermediate_outputs: list[dict[str, Any]] | None = None,
-    ) -> Path:
-        """Sync implementation of create_run_bundle."""
-        run_dir = self._run_dir(run_id)
-        run_dir.mkdir(parents=True, exist_ok=True)
+    ) -> None:
+        """Write the full run bundle to the database with PII redaction."""
+        from app.db import async_session_factory
+        from app.models.run_bundle import RunBundle
 
         bundle = {
             "run_id": run_id,
@@ -124,42 +117,27 @@ class AuditWriter:
             "intermediate_outputs": intermediate_outputs or [],
         }
 
-        raw_json = json.dumps(bundle, indent=2)
+        raw_json = json.dumps(bundle)
         redacted_json = self._redact(raw_json, "run_bundle")
 
-        bundle_path = run_dir / "bundle.json"
-        with open(bundle_path, "w", encoding="utf-8") as f:
-            f.write(redacted_json)
-
-        return bundle_path
-
-    async def create_run_bundle(
-        self,
-        run_id: str,
-        profile_hash: str,
-        policy_version_hash: str,
-        verifier_report: dict[str, Any],
-        final_artifacts: dict[str, Any],
-        intermediate_outputs: list[dict[str, Any]] | None = None,
-    ) -> Path:
-        """Write the full run bundle to ``bundle.json`` with PII redaction."""
-        return await asyncio.to_thread(
-            self._create_run_bundle_sync,
-            run_id, profile_hash, policy_version_hash,
-            verifier_report, final_artifacts, intermediate_outputs,
-        )
-
-    def _read_bundle_sync(self, run_id: str) -> dict[str, Any] | None:
-        """Sync implementation of read_bundle."""
-        bundle_path = self._run_dir(run_id) / "bundle.json"
-        if not bundle_path.exists():
-            return None
-        with open(bundle_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        async with async_session_factory() as session:
+            record = RunBundle(run_id=run_id, data=redacted_json)
+            session.add(record)
+            await session.commit()
 
     async def read_bundle(self, run_id: str) -> dict[str, Any] | None:
         """Read and return the bundle, or *None* if it does not exist."""
-        return await asyncio.to_thread(self._read_bundle_sync, run_id)
+        from app.db import async_session_factory
+        from app.models.run_bundle import RunBundle
+
+        async with async_session_factory() as session:
+            result = await session.execute(
+                select(RunBundle.data).where(RunBundle.run_id == run_id)
+            )
+            row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return json.loads(row)
 
     # ------------------------------------------------------------------
     # Utilities

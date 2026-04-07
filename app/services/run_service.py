@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import shutil
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -55,7 +54,6 @@ def run_to_read(run: Run) -> RunRead:
         started_at=run.started_at,
         finished_at=run.finished_at,
         verifier_status=run.verifier_status,
-        audit_path=run.audit_path,
     )
 
 
@@ -339,9 +337,7 @@ async def execute_run(run_id: str, profile_id: str, mode: str, api_key: str) -> 
         })
 
         policy_engine = PolicyEngine(settings.policy_dir)
-        audit_writer = AuditWriter(
-            artifacts_dir=settings.artifacts_dir, policy_engine=policy_engine
-        )
+        audit_writer = AuditWriter(policy_engine=policy_engine)
         await audit_writer.append(
             run_id,
             AuditEvent(
@@ -410,7 +406,6 @@ async def execute_run(run_id: str, profile_id: str, mode: str, api_key: str) -> 
 
         await _update_run_status(
             run_id, "completed",
-            audit_path=str(settings.artifacts_dir / "runs" / run_id),
             verifier_status=verifier_status,
         )
         await event_manager.publish(run_id, {
@@ -608,13 +603,7 @@ async def delete_run(db: AsyncSession, profile_id: str, run_id: str) -> bool:
     await db.delete(run)
     await db.commit()
 
-    # 5) Clean up audit artifacts from disk (in thread to avoid blocking)
-    def _cleanup() -> None:
-        run_dir = settings.artifacts_dir / "runs" / run_id
-        if run_dir.exists():
-            shutil.rmtree(run_dir, ignore_errors=True)
-
-    await asyncio.to_thread(_cleanup)
+    # Audit events and bundles are cascade-deleted via FK on runs.id
     return True
 
 

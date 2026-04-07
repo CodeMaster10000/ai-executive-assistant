@@ -10,3 +10,5 @@ from app.models.event import Event  # noqa: F401
 from app.models.group import Group  # noqa: F401
 from app.models.trend import Trend  # noqa: F401
 from app.models.cover_letter import CoverLetter  # noqa: F401
+from app.models.audit_event import AuditEventRecord  # noqa: F401
+from app.models.run_bundle import RunBundle  # noqa: F401

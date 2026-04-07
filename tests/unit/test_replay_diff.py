@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -18,13 +17,8 @@ from app.engine.replay import ReplayEngine
 
 
 @pytest.fixture()
-def artifacts_dir(tmp_path: Path) -> Path:
-    return tmp_path / "artifacts"
-
-
-@pytest.fixture()
-def writer(artifacts_dir: Path) -> AuditWriter:
-    return AuditWriter(artifacts_dir=artifacts_dir)
+def writer(test_session_factory) -> AuditWriter:
+    return AuditWriter()
 
 
 @pytest.fixture()

@@ -6,7 +6,6 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.engine.audit_writer import AuditWriter
 from app.engine.diff import DiffEngine
 from app.engine.replay import ReplayEngine
@@ -33,7 +32,7 @@ async def get_audit_trail(
 ) -> dict:
     """Return the full audit event log for a run."""
     await _get_run_or_raise(db, run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     events = await writer.read_log(run_id)
     return {"run_id": run_id, "events": events}
 
@@ -46,7 +45,7 @@ async def get_verifier_report(
     Raises LookupError if run or bundle not found.
     """
     await _get_run_or_raise(db, run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     bundle = await writer.read_bundle(run_id)
     if bundle is None:
         raise LookupError(_NO_AUDIT_BUNDLE)
@@ -61,7 +60,7 @@ async def replay_run(
     Raises LookupError if run or bundle not found, ValueError on other errors.
     """
     await _get_run_or_raise(db, run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     replay_engine = ReplayEngine(audit_writer=writer)
 
     new_run_id = str(uuid.uuid4())
@@ -102,7 +101,7 @@ async def get_executive_insights(
     Raises LookupError if run or bundle not found.
     """
     await _get_run_or_raise(db, run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     bundle = await writer.read_bundle(run_id)
     if bundle is None:
         raise LookupError(_NO_AUDIT_BUNDLE)
@@ -124,7 +123,7 @@ async def get_token_usage(
     Raises LookupError if run not found or no usage data recorded.
     """
     await _get_run_or_raise(db, run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     events = await writer.read_log(run_id)
     for event in reversed(events):
         if event.get("event_type") == "token_usage_summary":
@@ -141,6 +140,6 @@ async def diff_runs(
     """
     await _get_run_or_raise(db, run_id, profile_id)
     await _get_run_or_raise(db, other_run_id, profile_id)
-    writer = AuditWriter(artifacts_dir=settings.artifacts_dir)
+    writer = AuditWriter()
     diff_engine = DiffEngine(audit_writer=writer)
     return await diff_engine.diff_runs(run_id, other_run_id)

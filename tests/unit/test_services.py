@@ -25,7 +25,6 @@ def _make_run(
     started_at=_NOW,
     finished_at=_NOW,
     verifier_status="pass",
-    audit_path="/artifacts/runs/run-1",
     created_at=_NOW,
 ):
     run = MagicMock()
@@ -36,7 +35,6 @@ def _make_run(
     run.started_at = started_at
     run.finished_at = finished_at
     run.verifier_status = verifier_status
-    run.audit_path = audit_path
     run.created_at = created_at
     return run
 
@@ -226,20 +224,17 @@ class TestRunToRead:
         assert read.started_at == _NOW
         assert read.finished_at == _NOW
         assert read.verifier_status == "pass"
-        assert read.audit_path == "/artifacts/runs/run-1"
-
     def test_handles_none_optional_fields(self):
         from app.services.run_service import run_to_read
 
         run = _make_run(
             started_at=None, finished_at=None,
-            verifier_status=None, audit_path=None,
+            verifier_status=None,
         )
         read = run_to_read(run)
         assert read.started_at is None
         assert read.finished_at is None
         assert read.verifier_status is None
-        assert read.audit_path is None
 
 
 class TestParseProfileHelpers:
@@ -442,7 +437,7 @@ class TestCreateRun:
             obj.started_at = None
             obj.finished_at = None
             obj.verifier_status = None
-            obj.audit_path = None
+            pass
 
         db.refresh = AsyncMock(side_effect=_refresh)
 
