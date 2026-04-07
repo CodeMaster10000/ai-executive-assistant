@@ -19,7 +19,6 @@ For each result, extract:
 2. Target course platforms: Coursera, Udemy, edX, LinkedIn Learning, Skillshare, Pluralsight, Khan Academy, Codecademy, DataCamp, MasterClass, Brilliant, FutureLearn, Domestika, Treehouse
 3. Search for technology-specific communities: e.g., `"Python" Discord server`, `site:reddit.com "kubernetes" community`
 4. Prefer communities with active discussions and substantial membership
-5. Also look for GitHub Discussions, Stack Overflow communities, and dev.to groups
 
 ## URL Validation
 
