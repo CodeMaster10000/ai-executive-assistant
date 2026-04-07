@@ -26,3 +26,13 @@ jobs:
 
       - name: Test
         run: pytest
+        env:
+          API_KEY: sk-test-dummy
+
+  deploy:
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

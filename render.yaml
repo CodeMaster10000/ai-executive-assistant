@@ -9,6 +9,7 @@ services:
     name: stratoseer
     runtime: python
     plan: starter
+    autoDeploy: false
     buildCommand: pip install -e . && cd frontend && npm install && npm run build
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     preDeployCommand: alembic upgrade head
