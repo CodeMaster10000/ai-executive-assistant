@@ -491,13 +491,26 @@ class Verifier:
 
     @staticmethod
     def _check_duplicate_titles(key: str, items: list[dict[str, Any]]) -> list[CheckResult]:
-        """Return a PARTIAL check if duplicate titles exist in *items*."""
-        titles = [item.get("title") for item in items if isinstance(item, dict) and item.get("title")]
-        dup_titles = [t for t in set(titles) if titles.count(t) > 1]
-        if dup_titles:
+        """Return a PARTIAL check if true duplicates exist in *items*.
+
+        Two items with the same title but different company/provider/platform
+        are NOT duplicates (e.g. "Software Engineer III" at two companies).
+        """
+        def _dedup_key(item: dict[str, Any]) -> str:
+            title = item.get("title", "")
+            for attr in ("company", "provider", "platform", "organizer", "url"):
+                val = item.get(attr)
+                if val:
+                    return f"{title}||{val}"
+            return title
+
+        keys = [_dedup_key(item) for item in items if isinstance(item, dict) and item.get("title")]
+        dup_keys = [k for k in set(keys) if keys.count(k) > 1]
+        if dup_keys:
+            dup_titles = [k.split("||")[0] for k in dup_keys]
             return [CheckResult(
                 f"{key}_dedup", VerificationStatus.PARTIAL,
-                f"Duplicate titles in {key}: {len(dup_titles)} unique duplicates",
+                f"Duplicate titles in {key}: {len(dup_keys)} unique duplicates",
                 details={"duplicate_titles": dup_titles},
             )]
         return []

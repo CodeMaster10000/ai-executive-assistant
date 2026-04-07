@@ -590,7 +590,7 @@ class TestDedup:
     def test_removes_duplicates(self):
         items = [
             FormattedJob(title="Engineer", company="A"),
-            FormattedJob(title="Engineer", company="B"),
+            FormattedJob(title="Engineer", company="A"),
             FormattedJob(title="Manager", company="C"),
         ]
         result = _dedup(items)
@@ -598,6 +598,14 @@ class TestDedup:
         assert result[0]["title"] == "Engineer"
         assert result[0]["company"] == "A"
         assert result[1]["title"] == "Manager"
+
+    def test_keeps_same_title_different_company(self):
+        items = [
+            FormattedJob(title="Engineer", company="A"),
+            FormattedJob(title="Engineer", company="B"),
+        ]
+        result = _dedup(items)
+        assert len(result) == 2
 
     def test_empty_list(self):
         assert _dedup([]) == []
@@ -665,7 +673,7 @@ class TestDataFormatterAgent:
         parsed = DataFormatterOutput(
             jobs=[
                 FormattedJob(title="Same Job", company="A"),
-                FormattedJob(title="Same Job", company="B"),
+                FormattedJob(title="Same Job", company="A"),
             ],
         )
 

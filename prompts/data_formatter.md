@@ -83,10 +83,10 @@ Each raw result includes a `source` field identifying where it was found. Use th
 
 ## Guidelines
 
+- **You MUST output exactly one formatted item per raw input. Never drop, merge, or skip items.**
 - Extract as much structured data as possible from the raw snippets
 - Always populate the subtitle field (company/provider/platform/organizer/source) -- fall back to the raw `source` field rather than leaving it null
 - If a field is not available in the raw data, set it to null
-- Deduplicate entries with the same title
-- Be conservative: only include items that are clearly relevant to the category
-- **Job URLs must use LinkedIn format**: All job URLs must follow the pattern `https://www.linkedin.com/jobs/view/...`. If a job result has a URL that does not match this format, drop it from the response.
+- Deduplicate entries with the same title AND same company/provider/platform/organizer
+- **Job URLs must use LinkedIn format**: Job URLs must match `https://*.linkedin.com/jobs/view/...` (any LinkedIn subdomain including country codes like `mk.linkedin.com`, `uk.linkedin.com`, etc.). Preserve the original URL as-is -- do not rewrite subdomains.
 - Every array may be empty if no relevant items are found for that category

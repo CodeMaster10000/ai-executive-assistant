@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from app.agents.base import LLMAgent
@@ -10,17 +11,81 @@ from pydantic import BaseModel
 
 from app.agents.schemas import DataFormatterOutput
 
+logger = logging.getLogger(__name__)
+
+
+# -- Dedup helpers ----------------------------------------------------------
+
+def _dedup_key(item: BaseModel) -> str:
+    """Build a dedup key from title + distinguishing field."""
+    title = getattr(item, "title", "")
+    for attr in ("company", "provider", "platform", "organizer", "url"):
+        val = getattr(item, attr, None)
+        if val:
+            return f"{title}||{val}"
+    return title
+
 
 def _dedup(items: list[BaseModel]) -> list[dict]:
-    """Deduplicate by title, keeping the first occurrence."""
+    """Deduplicate keeping first occurrence per (title + company/provider/url)."""
     seen: set[str] = set()
     out: list[dict] = []
     for item in items:
-        title = getattr(item, "title", "")
-        if title not in seen:
-            seen.add(title)
+        key = _dedup_key(item)
+        if key not in seen:
+            seen.add(key)
             out.append(item.model_dump())
     return out
+
+
+# -- Recovery: deterministic fallback for dropped items ---------------------
+
+# Maps (raw_state_key, subtitle_field) for each category
+_CATEGORY_MAP = {
+    "jobs": ("raw_job_results", "company"),
+    "certifications": ("raw_cert_results", "provider"),
+    "courses": ("raw_course_results", "platform"),
+    "events": ("raw_event_results", "organizer"),
+    "groups": ("raw_group_results", "platform"),
+    "trends": ("raw_trend_results", "source"),
+}
+
+
+def _raw_to_formatted(raw: dict[str, Any], subtitle_field: str) -> dict[str, Any]:
+    """Convert a raw search result to a formatted dict without LLM."""
+    return {
+        "title": raw.get("title", "Untitled"),
+        subtitle_field: raw.get("source"),
+        "url": raw.get("url"),
+        "description": raw.get("snippet"),
+    }
+
+
+def _recover_missing(
+    formatted: list[dict], raw_items: list[dict], subtitle_field: str, category: str,
+) -> list[dict]:
+    """Append any raw items the LLM dropped, using deterministic field mapping."""
+    if len(formatted) >= len(raw_items):
+        return formatted
+
+    formatted_urls = {item.get("url") for item in formatted if item.get("url")}
+    formatted_titles = {item.get("title", "").lower() for item in formatted}
+
+    recovered = list(formatted)
+    for raw in raw_items:
+        url = raw.get("url", "")
+        title = raw.get("title", "").lower()
+        if url and url in formatted_urls:
+            continue
+        if title and title in formatted_titles:
+            continue
+        recovered.append(_raw_to_formatted(raw, subtitle_field))
+        logger.warning(
+            "data_formatter: recovered dropped %s item: %s",
+            category, raw.get("title", "?"),
+        )
+
+    return recovered
 
 
 class DataFormatterAgent(LLMAgent):
@@ -47,13 +112,29 @@ class DataFormatterAgent(LLMAgent):
             f"Raw trend results:\n{json.dumps(raw_trends, indent=2)}"
         )
         result, usage = await self._invoke_structured(DataFormatterOutput, system_prompt, user_content)
-        return {
-            "formatted_jobs": _dedup(result.jobs),
-            "formatted_certifications": _dedup(result.certifications),
-            "formatted_courses": _dedup(result.courses),
-            "formatted_events": _dedup(result.events),
-            "formatted_groups": _dedup(result.groups),
-            "formatted_trends": _dedup(result.trends),
-            "_token_usage": [usage] if usage else [],
+
+        raw_by_category = {
+            "jobs": raw_jobs,
+            "certifications": raw_certs,
+            "courses": raw_courses,
+            "events": raw_events,
+            "groups": raw_groups,
+            "trends": raw_trends,
+        }
+        llm_by_category = {
+            "jobs": _dedup(result.jobs),
+            "certifications": _dedup(result.certifications),
+            "courses": _dedup(result.courses),
+            "events": _dedup(result.events),
+            "groups": _dedup(result.groups),
+            "trends": _dedup(result.trends),
         }
 
+        output: dict[str, Any] = {}
+        for cat, (_, subtitle_field) in _CATEGORY_MAP.items():
+            formatted = llm_by_category[cat]
+            raw = raw_by_category[cat]
+            output[f"formatted_{cat}"] = _recover_missing(formatted, raw, subtitle_field, cat)
+
+        output["_token_usage"] = [usage] if usage else []
+        return output
