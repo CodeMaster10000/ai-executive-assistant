@@ -440,6 +440,54 @@ class TestMakeNode:
         tracker.record.assert_awaited_once()
         assert "_token_usage" not in result
 
+    async def test_input_keys_captured_in_audit_start(self):
+        agent = _make_async_agent("ceo", {"summary": "ok"})
+        aw = AsyncMock(spec=AuditWriter)
+        node_fn = make_node(
+            "p",
+            "ceo",
+            agent,
+            "llm_structured_output",
+            audit_writer=aw,
+            input_keys=["profile_targets", "formatted_jobs"],
+        )
+        await node_fn({
+            "run_id": "r1",
+            "profile_targets": ["architect"],
+            "formatted_jobs": [{"title": "Senior Architect"}],
+            "unrelated_key": "ignored",
+        })
+        # First append call is agent_start
+        start_event = aw.append.await_args_list[0][0][1]
+        assert start_event.event_type == "agent_start"
+        assert start_event.data == {
+            "profile_targets": ["architect"],
+            "formatted_jobs": [{"title": "Senior Architect"}],
+        }
+
+    async def test_input_keys_omits_none_values(self):
+        agent = _make_async_agent("ceo", {"summary": "ok"})
+        aw = AsyncMock(spec=AuditWriter)
+        node_fn = make_node(
+            "p",
+            "ceo",
+            agent,
+            "tool",
+            audit_writer=aw,
+            input_keys=["profile_targets", "cv_summary"],
+        )
+        await node_fn({"run_id": "r1", "profile_targets": ["dev"]})
+        start_event = aw.append.await_args_list[0][0][1]
+        assert start_event.data == {"profile_targets": ["dev"]}
+
+    async def test_no_input_keys_no_data(self):
+        agent = _make_async_agent("agent", {"val": 1})
+        aw = AsyncMock(spec=AuditWriter)
+        node_fn = make_node("p", "agent", agent, "tool", audit_writer=aw)
+        await node_fn({"run_id": "r1"})
+        start_event = aw.append.await_args_list[0][0][1]
+        assert start_event.data is None
+
 
 # ------------------------------------------------------------------
 # make_fan_out_node factory

@@ -18,7 +18,9 @@ class CEOAgent(LLMAgent):
         """Analyze formatted data and return strategic recommendations with a summary."""
         system_prompt = self._get_system_prompt()
         user_content = (
-            f"Profile targets: {json.dumps(state.get('profile_targets', []))}\n\n"
+            f"Profile targets: {json.dumps(state.get('profile_targets', []))}\n"
+            f"Profile skills: {json.dumps(state.get('profile_skills', []))}\n"
+            f"CV summary: {state.get('cv_summary', '')}\n\n"
             f"Jobs: {json.dumps(state.get('formatted_jobs', []))}\n"
             f"Certifications: {json.dumps(state.get('formatted_certifications', []))}\n"
             f"Courses: {json.dumps(state.get('formatted_courses', []))}\n"

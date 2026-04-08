@@ -252,6 +252,14 @@ def build_daily_graph(
             verifier,
             event_manager,
             token_tracker=token_tracker,
+            input_keys=[
+                "profile_targets",
+                "profile_constraints",
+                "preferred_title",
+                "industries",
+                "locations",
+                "work_arrangement",
+            ],
         ),
     )
     graph.add_node(
@@ -281,6 +289,14 @@ def build_daily_graph(
             verifier,
             event_manager,
             token_tracker=token_tracker,
+            input_keys=[
+                "raw_job_results",
+                "raw_cert_results",
+                "raw_course_results",
+                "raw_event_results",
+                "raw_group_results",
+                "raw_trend_results",
+            ],
         ),
     )
     graph.add_node(

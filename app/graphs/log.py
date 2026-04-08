@@ -228,6 +228,7 @@ def make_node(
     event_manager: Any | None = None,
     node_type: str = "agent",
     token_tracker: RunTokenTracker | None = None,
+    input_keys: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a graph node that runs a single agent with full lifecycle:
 
@@ -270,6 +271,11 @@ def make_node(
 
         # Audit: start
         if audit_writer:
+            input_data = (
+                {k: state.get(k) for k in input_keys if state.get(k) is not None}
+                if input_keys
+                else None
+            )
             await audit_writer.append(
                 run_id,
                 AuditEvent(
@@ -277,6 +283,7 @@ def make_node(
                     event_type=evt_start,
                     agent=agent_name,
                     node_type=node_type,
+                    data=input_data,
                 ),
             )
 
